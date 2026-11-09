@@ -1,3 +1,37 @@
+# Tutorial CRM
+
+A cumulative NocoBase 3 CRM for the first three quick-start lessons. The interface
+and sample business data default to English. Use Customers to manage customer
+details, contacts and follow-up records.
+
+| Stage      | Outcome                                             | Guide                        |
+| ---------- | --------------------------------------------------- | ---------------------------- |
+| `lesson-1` | Create, configure and run the application           | [Lesson 1](docs/lesson-1.md) |
+| `lesson-2` | Customers, contacts and follow-up records           | [Lesson 2](docs/lesson-2.md) |
+| `lesson-3` | Automated tests, build, local delivery and recovery | [Lesson 3](docs/lesson-3.md) |
+
+```sh
+pnpm install --frozen-lockfile
+pnpm nocobase config init --dialect sqlite --json
+pnpm nocobase config check --json
+pnpm dev
+```
+
+Open the exact `Local:` URL. Sign in with the local learning account `nocobase`
+(password `admin123`), then open **Customers**. Change the sample password before
+exposing the application. After initial startup, `pnpm nocobase db sample --json`
+loads three optional sample customers. `pnpm test` runs the Vitest suite.
+
+Check out a stage with `git switch -c my-crm lesson-2`; compare stages with
+`git diff lesson-1..lesson-2`. Git changes code only: preserve or separately
+restore configuration, database and storage. [Verification](docs/verification.md)
+records the tested runtime and delivery boundaries.
+
+The framework reference below is retained for application maintenance. Follow
+[AGENTS.md](AGENTS.md) and the synchronized application skills for development.
+
+---
+
 # NocoBase 3 Application
 
 A full-stack NocoBase 3 application. The server runs on `@nocobase/app-server` and the browser client is React with shadcn/ui and Tailwind CSS.
