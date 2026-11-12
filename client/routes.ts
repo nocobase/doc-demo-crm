@@ -3,7 +3,7 @@ import { createAppClientConfig } from '@nocobase/app-client';
 import { readAppClientRuntimeConfig } from '@nocobase/app-client/runtime';
 import { includeNotificationTemplateRoutes } from './pages/settings/notification-routes.js';
 import systemSettingsRoutes from './pages/settings/routes.js';
-import { Home, Building2 } from 'lucide-react';
+import { Home, Building2, Package } from 'lucide-react';
 import settingsShellRoutes from './pages/settings/shell-routes.js';
 import {
   defineAppRoutes,
@@ -43,6 +43,49 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         componentLoader: () => import('./pages/customers/detail.js'),
         children: [
           {
+            name: 'sales-opportunity-new',
+            path: 'newOpportunity',
+            presentation: { kind: 'dialog', title: 'sales.newOpportunity' },
+            componentLoader: () => import('./pages/sales/edit.js'),
+          },
+          {
+            name: 'sales-opportunity',
+            path: 'opportunities/:opportunityId',
+            breadcrumb: { title: 'sales.opportunities' },
+            componentLoader: () => import('./pages/sales/opportunity.js'),
+            children: [
+              {
+                name: 'sales-opportunity-edit',
+                path: 'edit',
+                presentation: {
+                  kind: 'dialog',
+                  title: 'sales.editOpportunity',
+                },
+                componentLoader: () => import('./pages/sales/edit.js'),
+              },
+              {
+                name: 'sales-quote-new',
+                path: 'newQuote',
+                presentation: { kind: 'dialog', title: 'sales.newQuote' },
+                componentLoader: () => import('./pages/sales/edit.js'),
+              },
+              {
+                name: 'sales-quote',
+                path: 'quotes/:quoteId',
+                breadcrumb: { title: 'sales.quotes' },
+                componentLoader: () => import('./pages/sales/quote.js'),
+                children: [
+                  {
+                    name: 'sales-quote-edit',
+                    path: 'edit',
+                    presentation: { kind: 'dialog', title: 'sales.editQuote' },
+                    componentLoader: () => import('./pages/sales/edit.js'),
+                  },
+                ],
+              },
+            ],
+          },
+          {
             name: 'customers-edit',
             path: 'edit',
             presentation: { kind: 'dialog', title: 'crm.editCustomer' },
@@ -61,6 +104,28 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
             componentLoader: () => import('./pages/customers/edit.js'),
           },
         ],
+      },
+    ],
+  },
+  {
+    name: 'products',
+    path: '/products',
+    auth: 'required',
+    authz: { resource: { type: 'page', id: 'customers' }, action: 'access' },
+    navigation: { title: 'sales.products', icon: Package },
+    componentLoader: () => import('./pages/sales/products.js'),
+    children: [
+      {
+        name: 'products-new',
+        path: 'new',
+        presentation: { kind: 'dialog', title: 'sales.newProduct' },
+        componentLoader: () => import('./pages/sales/edit.js'),
+      },
+      {
+        name: 'products-edit',
+        path: ':productId/edit',
+        presentation: { kind: 'dialog', title: 'sales.editProduct' },
+        componentLoader: () => import('./pages/sales/edit.js'),
       },
     ],
   },

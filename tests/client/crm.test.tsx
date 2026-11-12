@@ -128,6 +128,8 @@ it('validates the customer form and submits a protected write', async () => {
 it('opens the customer detail with related contacts and follow-ups', async () => {
   await mount(
     answerApi(({ path }) => {
+      if (path.startsWith('crmSales/'))
+        return { data: [], meta: { total: 0, page: 1, pageSize: 20 } };
       if (path.includes('/contacts'))
         return {
           data: [

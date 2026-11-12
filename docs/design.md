@@ -38,3 +38,17 @@ For prototype review, open `docs/prototype.html`, create and edit a customer, ad
 ## Deferred scope
 
 Sales and manager roles, customer ownership and sharing, opportunities, products, quotes, approvals, reminders, email synchronization, attachments and imports are outside the first release. There are no unresolved decisions in this tutorial's default scope. Record any reader-specific changes here before implementing them; update the prototype when they affect layouts or interaction.
+
+## Lesson 5 increment — Opportunities, products and quotes
+
+The first-release prototype remains the reference for its original customer flows. Lesson 5 extends the actual application using the same installed components and shell conventions:
+
+- Products have a name, unique code and current USD unit price. The catalogue provides search, pagination and create/edit dialogs.
+- A customer has many opportunities, with a required name, stage (Discovery, Proposal, Won or Lost) and notes. A stage is a classification, not an approval workflow.
+- An opportunity has many quotes. Each quote has a name and one to 100 product lines. The detail displays product name/code snapshots, quantity, unit price, discount, each rounded amount and the total.
+- Quantities are integers from 1 to 10,000; unit prices are 0–100,000 with two decimals; discounts are 0–100 percent with two decimals. Round each line half-up to cents before summing. The server owns totals.
+- Catalogue changes do not alter existing quote snapshots. Editing a quote carries each line's explicit saved price; repeated products at different prices are supported. Updating a quote and all its lines is atomic and receipt-protected.
+- Customer → opportunity → quote navigation uses nested detail routes and breadcrumbs; forms use existing route dialogs and retain unresolved submissions. Existing contacts and follow-ups remain accessible.
+- The initial customer page permission protects every sales endpoint. This stage does not yet introduce salesperson ownership or manager-specific permissions. No role is granted automatically to all signed-in users.
+
+Acceptance includes exact fractional rounding, product repricing without quote changes, quote edits, association boundaries, rejected invalid values, receipt replay, rollback, preserved older records and metadata relation reads. Standard components come from `client/components/data-table`, `route-dialog`, `feedback-form`, `pending-button` and `ui/{button,input,textarea,label,select,card,alert,alert-dialog}`; application code composes them without introducing custom primitives.

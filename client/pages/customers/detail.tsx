@@ -1,3 +1,4 @@
+import { SalesRelated } from '../sales/lists.js';
 import { usePageBreadcrumb, resolveListState } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useState } from 'react';
@@ -96,6 +97,7 @@ export default function CustomerDetail() {
                 </dl>
               </CardContent>
             </Card>
+            <SalesRelated customerId={customer.id} revision={revision} />
             <Related
               key={`contacts-${revision}`}
               customerId={customer.id}

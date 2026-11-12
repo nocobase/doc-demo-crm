@@ -1,8 +1,8 @@
 # Tutorial CRM
 
-A cumulative NocoBase 3 CRM for the first four quick-start lessons. The interface
+A cumulative NocoBase 3 CRM through Lesson 5. The interface
 and sample business data default to English. Use Customers to manage customer
-details, contacts and follow-up records.
+details, contacts, follow-up records, opportunities and quotes. Products holds the price catalogue.
 
 | Stage      | Outcome                                             | Guide                        |
 | ---------- | --------------------------------------------------- | ---------------------------- |
@@ -10,6 +10,7 @@ details, contacts and follow-up records.
 | `lesson-2` | Requirements and interactive prototype              | [Lesson 2](docs/lesson-2.md) |
 | `lesson-3` | Customers, contacts and follow-up records           | [Lesson 3](docs/lesson-3.md) |
 | `lesson-4` | Automated tests, build, local delivery and recovery | [Lesson 4](docs/lesson-4.md) |
+| `lesson-5` | Opportunities, product catalogue and quote snapshots | [Lesson 5](docs/lesson-5.md) |
 
 ```sh
 pnpm install --frozen-lockfile
