@@ -2,7 +2,8 @@ import databaseExplorerRoutes from './pages/settings/database-explorer/routes.js
 import { createAppClientConfig } from '@nocobase/app-client';
 import { readAppClientRuntimeConfig } from '@nocobase/app-client/runtime';
 import { includeNotificationTemplateRoutes } from './pages/settings/notification-routes.js';
-import { Home } from 'lucide-react';
+import systemSettingsRoutes from './pages/settings/routes.js';
+import { Home, Building2 } from 'lucide-react';
 import settingsShellRoutes from './pages/settings/shell-routes.js';
 import {
   defineAppRoutes,
@@ -20,6 +21,48 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'home',
     navigation: { title: 'navigation.home', icon: Home },
     path: '/',
+  },
+  {
+    name: 'customers',
+    path: '/customers',
+    auth: 'required',
+    authz: { resource: { type: 'page', id: 'customers' }, action: 'access' },
+    navigation: { title: 'crm.title', icon: Building2 },
+    componentLoader: () => import('./pages/customers/index.js'),
+    children: [
+      {
+        name: 'customers-new',
+        path: 'new',
+        presentation: { kind: 'dialog', title: 'crm.newCustomer' },
+        componentLoader: () => import('./pages/customers/edit.js'),
+      },
+      {
+        name: 'customers-detail',
+        path: ':customerId/details',
+        breadcrumb: { title: 'crm.detail' },
+        componentLoader: () => import('./pages/customers/detail.js'),
+        children: [
+          {
+            name: 'customers-edit',
+            path: 'edit',
+            presentation: { kind: 'dialog', title: 'crm.editCustomer' },
+            componentLoader: () => import('./pages/customers/edit.js'),
+          },
+          {
+            name: 'customers-contact-new',
+            path: 'newContact',
+            presentation: { kind: 'dialog', title: 'crm.newContact' },
+            componentLoader: () => import('./pages/customers/edit.js'),
+          },
+          {
+            name: 'customers-followup-new',
+            path: 'newFollowUp',
+            presentation: { kind: 'dialog', title: 'crm.newFollowUp' },
+            componentLoader: () => import('./pages/customers/edit.js'),
+          },
+        ],
+      },
+    ],
   },
   {
     // Declares no navigation, so the application decides where its entry goes (for example a sidebar item with an
@@ -77,7 +120,12 @@ export function createApplicationRoutes(
 ): readonly AppClientRouteContribution[] {
   const config = createAppClientConfig({ rawConfig });
   return includeNotificationTemplateRoutes(
-    [appRoutes, settingsShellRoutes, databaseExplorerRoutes],
+    [
+      appRoutes,
+      settingsShellRoutes,
+      systemSettingsRoutes,
+      databaseExplorerRoutes,
+    ],
     config.get<boolean>('notificationTemplates.invitationConfigured') === true,
   );
 }

@@ -1,13 +1,14 @@
 # Tutorial CRM
 
-A cumulative NocoBase 3 CRM tutorial. This stage defines the first-release requirements and provides an English interactive prototype before business implementation.
+A cumulative NocoBase 3 CRM tutorial. This stage implements customer management, contacts and follow-ups from the first-release design. The interface and sample data use English.
 
 | Stage      | Outcome                                      | Guide                        |
 | ---------- | -------------------------------------------- | ---------------------------- |
 | `lesson-1` | Create and run the application               | [Lesson 1](docs/lesson-1.md) |
 | `lesson-2` | Define requirements and review the prototype | [Lesson 2](docs/lesson-2.md) |
+| `lesson-3` | Manage customers, contacts and follow-ups    | [Lesson 3](docs/lesson-3.md) |
 
-Open [the prototype](docs/prototype.html) directly in a browser and read [the design](docs/design.md). Preview records are held in memory only. To run the actual application, follow [Lesson 1](docs/lesson-1.md); this stage adds no CRM tables or APIs and requires no database changes.
+Open [the prototype](docs/prototype.html) directly in a browser and read [the design](docs/design.md). Preview records are held in memory only. To run the actual application, follow [Lesson 1](docs/lesson-1.md); then follow [Lesson 3](docs/lesson-3.md) for migrations, optional sample data and business acceptance. Preserve configuration, database and storage when upgrading.
 
 The framework reference below is retained for application maintenance.
 

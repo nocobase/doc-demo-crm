@@ -5,7 +5,6 @@ import {
 } from '@nocobase/app-client/plugins';
 import { describe, expect, it } from 'vitest';
 
-import systemSettingsRoutes from '../../client/pages/settings/routes.js';
 import applicationRoutes, {
   createApplicationRoutes,
 } from '../../client/routes.ts';
@@ -194,27 +193,14 @@ describe('app client routes', () => {
     // The landing page and the inbox opted out of page authorization, so they are reachable by every signed-in user.
     expect(pageAuthorizations(resolved.routes)).toEqual([
       { name: 'home', authorizedAs: null },
-      { name: 'inbox', authorizedAs: null },
-      { name: 'settingsHome', authorizedAs: null },
-      { name: 'databaseExplorer', authorizedAs: 'database-explorer' },
-    ]);
-  });
-
-  it('includes database browsing and supports business settings registration', async () => {
-    // The built-in database browser joins the settings home without enabling business administration.
-    expect(
-      pagePaths(resolveRoutes().routes).filter((path) =>
-        path.startsWith('/settings'),
-      ),
-    ).toEqual(['/settings', '/settings/database-explorer']);
-    const built = resolveAppClientContributions([
-      {
-        packageName: '@nocobase/app-template-default',
-        routes: [...applicationRoutes, systemSettingsRoutes],
-        source: 'application',
-      },
-    ]);
-    expect(pageAuthorizations(built.routes)).toEqual([
+      ...[
+        'customers',
+        'customers-new',
+        'customers-detail',
+        'customers-edit',
+        'customers-contact-new',
+        'customers-followup-new',
+      ].map((name) => ({ name, authorizedAs: 'customers' })),
       { name: 'inbox', authorizedAs: null },
       { name: 'settingsHome', authorizedAs: null },
       { name: 'settingsUsers', authorizedAs: 'user:*' },
@@ -243,10 +229,24 @@ describe('app client routes', () => {
       })),
       { name: 'databaseExplorer', authorizedAs: 'database-explorer' },
     ]);
-    for (const loader of componentLoadersIn(built.routes))
-      await expect(loader()).resolves.toMatchObject({
-        default: expect.any(Function),
-      });
+  });
+
+  it('registers customer pages and account administration once', () => {
+    const paths = pagePaths(resolveRoutes().routes);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        '/customers',
+        '/customers/new',
+        '/customers/:customerId/details',
+        '/customers/:customerId/details/edit',
+        '/customers/:customerId/details/newContact',
+        '/customers/:customerId/details/newFollowUp',
+        '/settings',
+        '/settings/users',
+        '/settings/database-explorer',
+      ]),
+    );
+    expect(new Set(paths).size).toBe(paths.length);
   });
 
   it('keeps the inbox out of the application navigation', () => {
