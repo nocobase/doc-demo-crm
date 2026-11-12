@@ -2,7 +2,7 @@
 
 Stage: `lesson-1`. Starting point: an empty directory. This stage creates the
 NocoBase 3 application, authentication and administration foundation. Customer
-management arrives in Lesson 2.
+management arrives in Lesson 3, after requirements in Lesson 2.
 
 ## Run independently
 
@@ -24,7 +24,7 @@ The initial local learning account is `nocobase` (`admin@nocobase.com`) with the
 sample password `admin123`, as declared in `config.example.yml`. Change it before
 exposing the application. New accounts do not receive administrator access.
 English is the default interface language. No mail, AI or external database is
-needed for these three lessons.
+needed for the initial lessons.
 
 `config.yml`, SQLite data and `storage/` are local and ignored by Git. Keep the
 generated secrets with your database backups. A Git tag restores code, not data.

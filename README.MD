@@ -1,3 +1,18 @@
+# Tutorial CRM
+
+A cumulative NocoBase 3 CRM tutorial. This stage defines the first-release requirements and provides an English interactive prototype before business implementation.
+
+| Stage      | Outcome                                      | Guide                        |
+| ---------- | -------------------------------------------- | ---------------------------- |
+| `lesson-1` | Create and run the application               | [Lesson 1](docs/lesson-1.md) |
+| `lesson-2` | Define requirements and review the prototype | [Lesson 2](docs/lesson-2.md) |
+
+Open [the prototype](docs/prototype.html) directly in a browser and read [the design](docs/design.md). Preview records are held in memory only. To run the actual application, follow [Lesson 1](docs/lesson-1.md); this stage adds no CRM tables or APIs and requires no database changes.
+
+The framework reference below is retained for application maintenance.
+
+---
+
 # NocoBase 3 Application
 
 A full-stack NocoBase 3 application. The server runs on `@nocobase/app-server` and the browser client is React with shadcn/ui and Tailwind CSS.

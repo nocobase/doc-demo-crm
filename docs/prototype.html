@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tutorial CRM · Customer prototype</title>
+    <style>
+      :root {
+        --background: #fff;
+        --foreground: #18181b;
+        --muted: #f4f4f5;
+        --muted-foreground: #71717a;
+        --border: #e4e4e7;
+        --primary: #18181b;
+        --primary-foreground: #fff;
+        --ring: #a1a1aa;
+        --radius: 8px;
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+        color: var(--foreground);
+        background: var(--background);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--background);
+        color: var(--foreground);
+        padding: 8px 13px;
+      }
+      button:hover {
+        background: var(--muted);
+      }
+      button.primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-color: var(--primary);
+      }
+      button:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 9px 11px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--background);
+        color: var(--foreground);
+      }
+      textarea {
+        min-height: 86px;
+        resize: vertical;
+      }
+      aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 224px;
+        padding: 24px 16px;
+        background: var(--muted);
+        border-right: 1px solid var(--border);
+      }
+      .brand {
+        font-size: 18px;
+        font-weight: 650;
+        margin: 0 10px 30px;
+      }
+      nav button {
+        width: 100%;
+        text-align: left;
+        background: var(--background);
+      }
+      .account {
+        position: absolute;
+        bottom: 24px;
+        left: 26px;
+        color: var(--muted-foreground);
+      }
+      header {
+        height: 60px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 32px;
+        margin-left: 224px;
+      }
+      header span:last-child {
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+      main {
+        margin-left: 224px;
+        padding: 28px 32px;
+        max-width: 1600px;
+      }
+      .heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 22px;
+      }
+      h1 {
+        font-size: 24px;
+        line-height: 1.3;
+        margin: 0;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 0;
+      }
+      p {
+        margin: 6px 0;
+      }
+      .muted {
+        color: var(--muted-foreground);
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .toolbar input {
+        max-width: 340px;
+      }
+      .toolbar select {
+        max-width: 180px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 20px;
+        overflow: hidden;
+      }
+      .card-head {
+        padding: 17px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+      }
+      .card-body {
+        padding: 20px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .wide {
+        grid-column: 1/-1;
+      }
+      dt {
+        color: var(--muted-foreground);
+        font-size: 13px;
+      }
+      dd {
+        margin: 3px 0 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        text-align: left;
+      }
+      th {
+        font-weight: 500;
+        color: var(--muted-foreground);
+        background: var(--muted);
+      }
+      th,
+      td {
+        padding: 13px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      .record {
+        border: 0;
+        padding: 0;
+        background: transparent;
+        text-align: left;
+        font-weight: 550;
+      }
+      .record:hover {
+        text-decoration: underline;
+        background: transparent;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 9px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        font-size: 12px;
+      }
+      .empty {
+        padding: 28px;
+        text-align: center;
+        color: var(--muted-foreground);
+      }
+      .follow {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .follow:last-child {
+        border-bottom: 0;
+      }
+      .follow p {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .follow small {
+        color: var(--muted-foreground);
+      }
+      dialog {
+        width: min(560px, calc(100vw - 32px));
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        color: var(--foreground);
+        box-shadow: 0 18px 50px #0002;
+      }
+      dialog::backdrop {
+        background: #0005;
+      }
+      dialog h2 {
+        font-size: 20px;
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        font-weight: 500;
+      }
+      label input,
+      label select,
+      label textarea {
+        margin-top: 6px;
+        font-weight: 400;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 24px;
+      }
+      .notice {
+        font-size: 12px;
+        margin-top: 18px;
+        color: var(--muted-foreground);
+      }
+      .feedback {
+        color: var(--muted-foreground);
+        font-size: 13px;
+        min-height: 20px;
+        margin-bottom: 12px;
+      }
+      @media (max-width: 720px) {
+        aside {
+          width: 68px;
+          padding: 18px 8px;
+        }
+        .brand {
+          font-size: 12px;
+          margin: 0 0 24px;
+        }
+        .account {
+          display: none;
+        }
+        nav button {
+          font-size: 10px;
+          padding: 8px 2px;
+        }
+        header,
+        main {
+          margin-left: 68px;
+        }
+        header {
+          padding: 0 16px;
+        }
+        main {
+          padding: 20px 16px;
+        }
+        .grid,
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .toolbar {
+          flex-wrap: wrap;
+        }
+        .table-wrap {
+          overflow: auto;
+        }
+        header span:last-child {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <div class="brand">Tutorial CRM</div>
+      <nav><button id="nav-customers">Customers</button></nav>
+      <div class="account">
+        Alex Morgan<br /><small>Administrator · Preview</small>
+      </div>
+    </aside>
+    <header>
+      <span id="breadcrumb">Customers</span
+      ><span>Interactive prototype · No server or database</span>
+    </header>
+    <main>
+      <div id="feedback" class="feedback" role="status"></div>
+      <section id="view"></section>
+      <p class="notice">
+        Prototype only. Records stay in this page until reloaded. Login,
+        permissions and persistence are simulated.
+      </p>
+    </main>
+    <dialog id="editor" aria-labelledby="editor-title">
+      <form id="entry-form">
+        <h2 id="editor-title"></h2>
+        <div id="fields" class="form-grid"></div>
+        <div class="actions">
+          <button type="button" id="cancel">Cancel</button
+          ><button class="primary" type="submit">Save</button>
+        </div>
+      </form>
+    </dialog>
+    <script>
+      const customers = [
+        {
+          id: 1,
+          name: 'Northstar Labs',
+          industry: 'Technology',
+          website: 'https://northstar.example',
+          status: 'prospect',
+          notes: 'Interested in a customer follow-up system.',
+          contacts: [
+            {
+              name: 'Emma Reed',
+              title: 'Operations Director',
+              email: 'emma@northstar.example',
+              phone: '+1 555 0101',
+            },
+          ],
+          followUps: [
+            {
+              type: 'Meeting',
+              content: 'Discussed the current sales process.',
+              nextStep: 'Arrange a product walkthrough.',
+              actor: 'Alex Morgan',
+              date: '2026-11-09T09:00:00Z',
+            },
+          ],
+        },
+        {
+          id: 2,
+          name: 'Harbor Supply',
+          industry: 'Distribution',
+          website: 'https://harbor.example',
+          status: 'customer',
+          notes: 'Existing customer reviewing a new team rollout.',
+          contacts: [],
+          followUps: [],
+        },
+        {
+          id: 3,
+          name: 'Summit Analytics',
+          industry: 'Consulting',
+          website: '',
+          status: 'inactive',
+          notes: 'Retain the past conversation for future reference.',
+          contacts: [],
+          followUps: [
+            {
+              type: 'Note',
+              content: 'Project deferred until next year.',
+              nextStep: '',
+              actor: 'Alex Morgan',
+              date: '2026-11-08T10:00:00Z',
+            },
+          ],
+        },
+      ];
+      const view = document.querySelector('#view'),
+        dialog = document.querySelector('#editor'),
+        form = document.querySelector('#entry-form');
+      let currentId = null,
+        mode = '',
+        search = '',
+        status = 'all';
+      const escape = (value) =>
+        String(value ?? '').replace(
+          /[&<>"']/g,
+          (char) =>
+            ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;',
+            })[char],
+        );
+      const title = (value) => value.charAt(0).toUpperCase() + value.slice(1);
+      const current = () =>
+        customers.find((customer) => customer.id === currentId);
+      function tell(message) {
+        document.querySelector('#feedback').textContent = message;
+      }
+      function showList() {
+        currentId = null;
+        document.querySelector('#breadcrumb').textContent = 'Customers';
+        view.innerHTML =
+          '<div class="heading"><h1>Customers</h1><button class="primary" data-action="new">New customer</button></div><div class="toolbar"><input id="search" aria-label="Search customers" placeholder="Search customers" value="' +
+          escape(search) +
+          '"><select id="status" aria-label="Filter by status">' +
+          ['all', 'prospect', 'customer', 'inactive']
+            .map(
+              (value) =>
+                '<option value="' +
+                value +
+                '" ' +
+                (status === value ? 'selected' : '') +
+                '>' +
+                (value === 'all' ? 'All statuses' : title(value)) +
+                '</option>',
+            )
+            .join('') +
+          '</select></div><div class="card table-wrap"><table><thead><tr><th>Name</th><th>Industry</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div><p id="count" class="muted"></p>';
+        renderRows();
+        document.querySelector('#search').addEventListener('input', (event) => {
+          search = event.target.value;
+          renderRows();
+        });
+        document
+          .querySelector('#status')
+          .addEventListener('change', (event) => {
+            status = event.target.value;
+            renderRows();
+          });
+      }
+      function renderRows() {
+        const rows = customers.filter(
+          (customer) =>
+            customer.name.toLowerCase().includes(search.toLowerCase()) &&
+            (status === 'all' || customer.status === status),
+        );
+        document.querySelector('#rows').innerHTML = rows.length
+          ? rows
+              .map(
+                (customer) =>
+                  '<tr><td><button class="record" data-customer="' +
+                  customer.id +
+                  '">' +
+                  escape(customer.name) +
+                  '</button></td><td>' +
+                  escape(customer.industry || 'Not provided') +
+                  '</td><td><span class="badge">' +
+                  title(customer.status) +
+                  '</span></td></tr>',
+              )
+              .join('')
+          : '<tr><td colspan="3" class="empty">No customers match these filters.</td></tr>';
+        document.querySelector('#count').textContent =
+          rows.length + ' customers';
+      }
+      function showDetail(id) {
+        currentId = id;
+        const customer = current();
+        document.querySelector('#breadcrumb').textContent =
+          'Customers / ' + customer.name;
+        view.innerHTML =
+          '<div class="heading"><h1>' +
+          escape(customer.name) +
+          '</h1><button data-action="edit">Edit customer</button></div><div class="card"><div class="card-head"><h2>Overview</h2><span class="badge">' +
+          title(customer.status) +
+          '</span></div><dl class="card-body grid">' +
+          [
+            ['Industry', customer.industry],
+            ['Website', customer.website],
+            ['Notes', customer.notes],
+          ]
+            .map(
+              ([label, value]) =>
+                '<div class="' +
+                (label === 'Notes' ? 'wide' : '') +
+                '"><dt>' +
+                label +
+                '</dt><dd>' +
+                escape(value || 'Not provided') +
+                '</dd></div>',
+            )
+            .join('') +
+          '</dl></div><div class="card"><div class="card-head"><h2>Contacts</h2><button data-action="contact">Add contact</button></div>' +
+          (customer.contacts.length
+            ? '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Title</th><th>Email</th><th>Phone</th></tr></thead><tbody>' +
+              customer.contacts
+                .map(
+                  (contact) =>
+                    '<tr><td>' +
+                    escape(contact.name) +
+                    '</td><td>' +
+                    escape(contact.title) +
+                    '</td><td>' +
+                    escape(contact.email) +
+                    '</td><td>' +
+                    escape(contact.phone) +
+                    '</td></tr>',
+                )
+                .join('') +
+              '</tbody></table></div>'
+            : '<div class="empty">No contacts yet.</div>') +
+          '</div><div class="card"><div class="card-head"><h2>Follow-ups</h2><button data-action="follow">Record follow-up</button></div>' +
+          (customer.followUps.length
+            ? customer.followUps
+                .map(
+                  (follow) =>
+                    '<article class="follow"><span class="badge">' +
+                    escape(follow.type) +
+                    '</span><p>' +
+                    escape(follow.content) +
+                    '</p>' +
+                    (follow.nextStep
+                      ? '<p class="muted">Next step: ' +
+                        escape(follow.nextStep) +
+                        '</p>'
+                      : '') +
+                    '<small>' +
+                    escape(follow.actor) +
+                    ' · ' +
+                    escape(new Date(follow.date).toLocaleString('en-US')) +
+                    '</small></article>',
+                )
+                .join('')
+            : '<div class="empty">No follow-ups yet.</div>') +
+          '</div>';
+      }
+      const input = (
+        label,
+        name,
+        value = '',
+        required = false,
+        type = 'text',
+      ) =>
+        '<label>' +
+        label +
+        (required ? ' *' : '') +
+        '<input name="' +
+        name +
+        '" type="' +
+        type +
+        '" value="' +
+        escape(value) +
+        '" ' +
+        (required ? 'required' : '') +
+        '></label>';
+      const area = (label, name, value = '', required = false) =>
+        '<label class="wide">' +
+        label +
+        (required ? ' *' : '') +
+        '<textarea name="' +
+        name +
+        '" ' +
+        (required ? 'required' : '') +
+        '>' +
+        escape(value) +
+        '</textarea></label>';
+      function openEditor(action) {
+        mode = action;
+        const customer = current();
+        document.querySelector('#editor-title').textContent = {
+          new: 'New customer',
+          edit: 'Edit customer',
+          contact: 'Add contact',
+          follow: 'Record follow-up',
+        }[mode];
+        let fields = '';
+        if (mode === 'new' || mode === 'edit') {
+          const item = mode === 'edit' ? customer : {};
+          fields =
+            input('Name', 'name', item.name, true) +
+            input('Industry', 'industry', item.industry) +
+            input('Website', 'website', item.website) +
+            '<label>Status<select name="status" aria-label="Status">' +
+            ['prospect', 'customer', 'inactive']
+              .map(
+                (value) =>
+                  '<option value="' +
+                  value +
+                  '" ' +
+                  (item.status === value ? 'selected' : '') +
+                  '>' +
+                  title(value) +
+                  '</option>',
+              )
+              .join('') +
+            '</select></label>' +
+            area('Notes', 'notes', item.notes);
+        } else if (mode === 'contact') {
+          fields =
+            input('Name', 'name', '', true) +
+            input('Title', 'title') +
+            input('Email', 'email', '', false, 'email') +
+            input('Phone', 'phone');
+        } else {
+          fields =
+            '<label class="wide">Type<select name="type" aria-label="Type">' +
+            ['Call', 'Email', 'Meeting', 'Note']
+              .map((type) => '<option>' + type + '</option>')
+              .join('') +
+            '</select></label>' +
+            area('Content', 'content', '', true) +
+            area('Next step', 'nextStep');
+        }
+        document.querySelector('#fields').innerHTML = fields;
+        dialog.showModal();
+      }
+      view.addEventListener('click', (event) => {
+        const action = event.target.closest('[data-action]');
+        if (action) openEditor(action.dataset.action);
+        const record = event.target.closest('[data-customer]');
+        if (record) {
+          tell('');
+          showDetail(Number(record.dataset.customer));
+        }
+      });
+      document.querySelector('#nav-customers').addEventListener('click', () => {
+        tell('');
+        showList();
+      });
+      document
+        .querySelector('#cancel')
+        .addEventListener('click', () => dialog.close());
+      form.addEventListener('input', (event) =>
+        event.target.setCustomValidity?.(''),
+      );
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form));
+        for (const name of ['name', 'content']) {
+          const field = form.elements.namedItem(name);
+          if (field?.required && !data[name]?.trim()) {
+            field.setCustomValidity(
+              'Please enter ' +
+                (name === 'name' ? 'a name.' : 'follow-up content.'),
+            );
+            field.reportValidity();
+            return;
+          }
+        }
+        for (const key in data) data[key] = data[key].trim();
+        if (mode === 'new') {
+          currentId = Math.max(...customers.map((customer) => customer.id)) + 1;
+          customers.push({
+            ...data,
+            id: currentId,
+            contacts: [],
+            followUps: [],
+          });
+        } else if (mode === 'edit') {
+          Object.assign(current(), data);
+        } else if (mode === 'contact') {
+          current().contacts.push(data);
+        } else {
+          current().followUps.unshift({
+            ...data,
+            actor: 'Alex Morgan',
+            date: new Date().toISOString(),
+          });
+        }
+        dialog.close();
+        showDetail(currentId);
+        tell(
+          {
+            new: 'Customer created in this preview.',
+            edit: 'Customer updated in this preview.',
+            contact: 'Contact added in this preview.',
+            follow: 'Follow-up recorded in this preview.',
+          }[mode],
+        );
+      });
+      showList();
+    </script>
+  </body>
+</html>

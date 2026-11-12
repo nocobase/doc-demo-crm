@@ -4,6 +4,10 @@ This is a NocoBase 3 application. Do not apply globally installed NocoBase 2 Ski
 
 Build application-specific features directly in the application by default. Use a plugin when the user requests one or when code reuse or modular organization calls for a separately registered, maintainable feature. Local plugins belong under `packages/`; the App builds and packages registered local plugins for deployment, so publishing is optional and only needed when distributing the plugin through a package registry. Follow [the project plugin development Skill](.agents/skills/nocobase-app-plugin-development/SKILL.md). Ordinary internal packages can share code without plugin registration; follow [internal packages](.agents/rules/workspace.md) when that is the boundary the application needs.
 
+## Tutorial business design
+
+Before changing CRM business behavior, read [the first-release design](docs/design.md) and [the interactive prototype](docs/prototype.html). The design owns business rules; the prototype describes the first-release layouts and interactions. Update the design when requirements change, and the prototype when its covered interfaces change, before implementation. Later lessons may add separate interfaces beyond this first-release prototype.
+
 ## Default template scope
 
 Default is the clean application starting point. It registers product capabilities but no `app-plugin-*-example` plugins, example pages, application sample services, or sample APIs. Keep runnable demonstrations in `app-template-examples`. Application-owned business server routes start empty; Users supplies the standard Permission Set role scope. Application-owned pages include the localized homepage and inbox; prepared user/role administration modules are unregistered in the bare template and enabled as business capabilities are developed.
