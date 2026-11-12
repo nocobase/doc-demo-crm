@@ -18,6 +18,7 @@ import { Button } from '#components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '#components/ui/tabs';
 import { Loading } from '#components/loading';
 import { useListData } from '#hooks/use-list-data';
+import { useCustomerOperation } from '#hooks/use-crm-access';
 import { useRouteSearches } from '../../routing/route-context.js';
 import { ReadError } from './shared.js';
 import type { Customer, CustomerContext } from './types.js';
@@ -25,6 +26,7 @@ import type { Customer, CustomerContext } from './types.js';
 export default function CustomerDetail() {
   const { t } = useTranslation();
   const { customerId } = useParams();
+  const access = useCustomerOperation(customerId, 'editCustomer');
   const parent = useResolvedPath('..').pathname;
   const ownPath = useResolvedPath('.').pathname;
   const location = useLocation();
@@ -45,6 +47,7 @@ export default function CustomerDetail() {
   const [revision, setRevision] = useState(0);
   const reload = () => {
     request.reload();
+    access.reload();
     owner.reload();
     setRevision((v) => v + 1);
   };
@@ -64,7 +67,7 @@ export default function CustomerDetail() {
         <PageHeader
           title={customer?.name ?? t('crm.detail')}
           actions={
-            customer ? (
+            customer && access.allowed ? (
               <Button
                 nativeButton={false}
                 render={

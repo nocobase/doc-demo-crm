@@ -1,3 +1,4 @@
+import { scopedRepository, type CrmPolicies } from './crm-permissions.js';
 import { randomUUID } from 'node:crypto';
 import {
   type DatabaseConnection,
@@ -36,6 +37,7 @@ export const ListInput = z.object({
 });
 export const Customer = CustomerInput.extend({
   id: z.string(),
+  ownerId: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -52,9 +54,15 @@ export const FollowUp = FollowUpInput.extend({
 });
 
 export class CrmService {
-  constructor(private readonly connection: DatabaseConnection) {}
+  constructor(
+    private readonly connection: DatabaseConnection,
+    private readonly policies: CrmPolicies,
+  ) {}
+  private repository(name: string) {
+    return scopedRepository(this.connection, this.policies, name);
+  }
   async list(input: z.infer<typeof ListInput>) {
-    const repository = this.connection.repository('crmCustomers');
+    const repository = this.repository('crmCustomers');
     const filter: RepositoryFilter<RepositoryRecord> = (f) =>
       f.and([
         ...(input.q
@@ -77,9 +85,9 @@ export class CrmService {
     };
   }
   async get(id: string) {
-    const record = await this.connection
-      .repository('crmCustomers')
-      .findOne({ filter: { id } });
+    const record = await this.repository('crmCustomers').findOne({
+      filter: { id },
+    });
     if (!record) throw missing();
     return record;
   }
@@ -89,7 +97,7 @@ export class CrmService {
     page: number,
   ) {
     await this.get(customerId);
-    const repository = this.connection.repository(
+    const repository = this.repository(
       kind === 'contacts' ? 'crmContacts' : 'crmFollowUps',
     );
     const filter = { customerId };
@@ -104,8 +112,12 @@ export class CrmService {
     ]);
     return { data, meta: { total, page, pageSize: 20 } };
   }
-  async saveCustomer(input: z.infer<typeof CustomerInput>, id?: string) {
-    const repo = this.connection.repository('crmCustomers');
+  async saveCustomer(
+    input: z.infer<typeof CustomerInput>,
+    id?: string,
+    ownerId?: string,
+  ) {
+    const repo = this.repository('crmCustomers');
     const now = new Date().toISOString();
     try {
       return (
@@ -117,6 +129,7 @@ export class CrmService {
           : await repo.createOne({
               values: {
                 id: randomUUID(),
+                ownerId: ownerId ?? null,
                 ...input,
                 createdAt: now,
                 updatedAt: now,
@@ -135,7 +148,7 @@ export class CrmService {
     id?: string,
   ) {
     await this.get(customerId);
-    const repo = this.connection.repository('crmContacts');
+    const repo = this.repository('crmContacts');
     try {
       return (
         id
@@ -162,7 +175,7 @@ export class CrmService {
   ) {
     await this.get(customerId);
     return (
-      await this.connection.repository('crmFollowUps').createOne({
+      await this.repository('crmFollowUps').createOne({
         values: {
           id: randomUUID(),
           customerId,

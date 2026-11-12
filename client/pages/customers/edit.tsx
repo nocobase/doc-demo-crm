@@ -7,7 +7,12 @@ import {
 import { useAuthentication } from '@nocobase/app-plugin-authentication/client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useEffect, useId, useRef, useState } from 'react';
-import { useLocation, useNavigate, useOutletContext } from 'react-router';
+import {
+  useLocation,
+  useNavigate,
+  useOutletContext,
+  useParams,
+} from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { FeedbackForm } from '#components/feedback-form';
 import { RouteDialog } from '#components/route-dialog';
@@ -29,7 +34,8 @@ import {
   AlertDialogAction,
 } from '#components/ui/alert-dialog';
 import { Loading } from '#components/loading';
-import { Choice } from './shared.js';
+import { Choice, ReadError } from './shared.js';
+import { useCrmAccess, useCustomerOperation } from '#hooks/use-crm-access';
 import type { CustomerContext } from './types.js';
 
 type Values = Record<string, string>;
@@ -43,6 +49,35 @@ export default function CrmEditor() {
       ? 'followUp'
       : 'customer';
   const editing = location.pathname.endsWith('/edit');
+  const params = useParams();
+  const globalAccess = useCrmAccess();
+  const recordAccess = useCustomerOperation(
+    params.customerId,
+    kind === 'contact'
+      ? 'addContact'
+      : kind === 'followUp'
+        ? 'recordFollowUp'
+        : 'editCustomer',
+  );
+  const creatingCustomer = kind === 'customer' && !editing;
+  const access = creatingCustomer ? globalAccess : recordAccess;
+  const allowed = creatingCustomer
+    ? globalAccess.access?.createCustomer
+    : recordAccess.allowed;
+  if (access.error || access.loading || !allowed)
+    return (
+      <RouteDialog title={t('crm.title')}>
+        {access.error ? (
+          <ReadError error={access.error} retry={access.reload} />
+        ) : access.loading ? (
+          <Loading />
+        ) : (
+          <Alert>
+            <AlertDescription>{t('crmAccess.deniedEdit')}</AlertDescription>
+          </Alert>
+        )}
+      </RouteDialog>
+    );
   if ((editing || kind !== 'customer') && !context.customer)
     return (
       <RouteDialog title={t('crm.title')}>

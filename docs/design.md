@@ -64,3 +64,17 @@ Keep the existing theme, shell, record URLs and quote rules. Compose routine pag
 - The original prototype is the first-release reference; this section supersedes its vertically stacked detail sections with route tabs and adds the workspace. There is no new visual theme or shell exception.
 
 Acceptance: combined search/status filters, empty results, failure/retry, direct tab URLs and reload, save/cancel to the same tab, browser back, workspace links and current counts, retained older records, and narrow-screen return paths.
+
+## Lesson 7 · Sales roles and customer access
+
+Sales users can read and maintain their own customers, contacts, follow-ups, opportunities and quotes. Creating a customer assigns it to the signed-in user. Sales managers can maintain every customer and assign its owner. Customers retained from earlier stages start unassigned; only a manager or administrator can see and assign them. Inactive remains a classification and does not prevent authorized edits.
+
+Managers can share a customer's complete related history read-only with explicitly selected sales users and revoke that share. Sharing adds read access only; it never grants editing. A person's independent ownership or manager grant remains effective when a share is revoked. Product viewing is available to sales; only managers maintain products. Platform administrators retain their unrestricted access.
+
+Use native Permission Sets, Users role assignment, record scopes and Sharing Rules. The initial Sales and Sales manager sets are editable; no business role is assigned to all signed-in users. Administrators assign the sets to named users through System settings → Users. Page access alone does not grant API operations, and an action grant alone does not grant page navigation.
+
+Customer details show the current owner and whether the record is read-only. Authorized managers can assign an owner and edit the shared-user list. Customer, contact, follow-up, opportunity, quote and product action controls reflect the same operations enforced by the server, including direct form URLs. The first-release prototype remains a reference for its original single-administrator screens; the running application demonstrates this later permission increment.
+
+Acceptance uses a manager, two sales users and a user without CRM roles. Check own, other, unassigned and shared customers; all related reads and writes; workspace counts and recent records; product maintenance; owner reassignment; share revocation; page-only/action-only grants; and retries after access is removed. Use separate browser sessions and direct API requests, and confirm old records survive the migration.
+
+For native row scopes, quotes and quote lines carry a server-maintained customer key derived from their existing parents. The incremental migration preserves all prior business values and leaves older customers unassigned. The nullable scope keys are backfilled on upgrade; new application writes always populate them, and null scope keys do not match salesperson access. The quote-scope migration is forward-only because rebuilding a referenced SQLite table for rollback can violate existing foreign keys; recovery uses a matching backup.

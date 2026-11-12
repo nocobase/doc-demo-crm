@@ -5,7 +5,10 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router';
 import { expect, it } from 'vitest';
-import { renderSettingsClient } from '../helpers/settings-client.js';
+import {
+  renderCrmClient,
+  type CrmClientFixture,
+} from '../helpers/crm-client.js';
 import Products from '../../client/pages/sales/products.js';
 import SalesEditor from '../../client/pages/sales/edit.js';
 import { RouteTreeProvider } from '../../client/routing/route-context.js';
@@ -26,8 +29,12 @@ const list = (data = [product]) => ({
   data,
   meta: { total: data.length, page: 1, pageSize: 20 },
 });
-function mount(fetch: typeof globalThis.fetch, route = '/products') {
-  return renderSettingsClient(
+function mount(
+  fetch: typeof globalThis.fetch,
+  route = '/products',
+  fixture: CrmClientFixture = {},
+) {
+  return renderCrmClient(
     <RouteTreeProvider routes={routes}>
       <PageBreadcrumbProvider>
         <Routes>
@@ -49,6 +56,7 @@ function mount(fetch: typeof globalThis.fetch, route = '/products') {
         },
       },
     },
+    fixture,
   );
 }
 it('searches products while retaining focus and entered search text', async () => {
@@ -86,9 +94,10 @@ it('saves a new product and returns to the refreshed catalogue', async () => {
     }),
     '/products/new',
   );
-  const dialog = await screen.findByRole('dialog');
+  await screen.findByRole('textbox', { name: 'Name', exact: true });
+  const dialog = screen.getByRole('dialog');
   await userEvent.type(
-    within(dialog).getByRole('textbox', { name: 'Name', exact: true }),
+    await within(dialog).findByRole('textbox', { name: 'Name', exact: true }),
     'New license',
   );
   await userEvent.type(
@@ -145,4 +154,54 @@ it('retains a rejected product draft for correction', async () => {
   await waitFor(() => expect(attempted).toBe(true));
   expect(name).toHaveValue('Retained license');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
+});
+
+it('keeps the product catalogue readable without showing write actions to sales', async () => {
+  await mount(
+    answerApi(() => list()),
+    '/products',
+    { productActions: ['view'] },
+  );
+  expect(await screen.findByText('Team license')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'New product' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Edit product' }),
+  ).not.toBeInTheDocument();
+});
+it.each(['/products/new', `/products/${product.id}/edit`])(
+  'guards direct product write URL %s for a reader',
+  async (route) => {
+    const paths: string[] = [];
+    await mount(
+      answerApi(({ path }) => {
+        paths.push(path);
+        return list();
+      }),
+      route,
+      { productActions: ['view'] },
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      await within(dialog).findByText(
+        'You do not have permission to make this change.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+    expect(paths).not.toContain(`crmSales/products/${product.id}`);
+  },
+);
+it('offers create without also granting catalogue edits', async () => {
+  await mount(
+    answerApi(() => list()),
+    '/products',
+    { productActions: ['view', 'create'] },
+  );
+  expect(
+    await screen.findByRole('button', { name: 'New product' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Edit product' }),
+  ).not.toBeInTheDocument();
 });

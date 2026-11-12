@@ -1,3 +1,4 @@
+import { scopedRepository, type CrmPolicies } from './crm-permissions.js';
 import { randomUUID } from 'node:crypto';
 import {
   type DatabaseConnection,
@@ -94,9 +95,15 @@ const productResult = (r: RepositoryRecord) =>
 const quoteResult = (r: RepositoryRecord) =>
   Quote.parse({ ...r, total: Number(r.totalCents) / 100 });
 export class SalesService {
-  constructor(private readonly connection: DatabaseConnection) {}
+  constructor(
+    private readonly connection: DatabaseConnection,
+    private readonly policies: CrmPolicies,
+  ) {}
+  private repository(name: string) {
+    return scopedRepository(this.connection, this.policies, name);
+  }
   async products(input: z.infer<typeof SalesListInput>) {
-    const repo = this.connection.repository('crmProducts');
+    const repo = this.repository('crmProducts');
     const data = await repo.findMany({
       filter: (f) =>
         input.q
@@ -118,15 +125,15 @@ export class SalesService {
     };
   }
   async product(id: string) {
-    const record = await this.connection
-      .repository('crmProducts')
-      .findOne({ filter: { id } });
+    const record = await this.repository('crmProducts').findOne({
+      filter: { id },
+    });
     if (!record) throw missing();
     return productResult(record);
   }
   async saveProduct(input: z.infer<typeof ProductInput>, id?: string) {
     if (id) await this.product(id);
-    const repo = this.connection.repository('crmProducts');
+    const repo = this.repository('crmProducts');
     const duplicate = await repo.findOne({ filter: { code: input.code } });
     if (duplicate && duplicate.id !== id)
       throw new ApiError({
@@ -163,8 +170,8 @@ export class SalesService {
     }
   }
   async opportunities(customerId: string, page: number) {
-    await new CrmService(this.connection).get(customerId);
-    const repo = this.connection.repository('crmOpportunities');
+    await new CrmService(this.connection, this.policies).get(customerId);
+    const repo = this.repository('crmOpportunities');
     const filter = { customerId };
     return {
       data: await repo.findMany({
@@ -177,10 +184,10 @@ export class SalesService {
     };
   }
   async opportunity(customerId: string, id: string) {
-    await new CrmService(this.connection).get(customerId);
-    const record = await this.connection
-      .repository('crmOpportunities')
-      .findOne({ filter: { id, customerId } });
+    await new CrmService(this.connection, this.policies).get(customerId);
+    const record = await this.repository('crmOpportunities').findOne({
+      filter: { id, customerId },
+    });
     if (!record) throw missing();
     return record;
   }
@@ -189,9 +196,9 @@ export class SalesService {
     input: z.infer<typeof OpportunityInput>,
     id?: string,
   ) {
-    await new CrmService(this.connection).get(customerId);
+    await new CrmService(this.connection, this.policies).get(customerId);
     if (id) await this.opportunity(customerId, id);
-    const repo = this.connection.repository('crmOpportunities');
+    const repo = this.repository('crmOpportunities');
     const now = new Date().toISOString();
     return (
       id
@@ -212,7 +219,7 @@ export class SalesService {
   }
   async quotes(customerId: string, opportunityId: string, page: number) {
     await this.opportunity(customerId, opportunityId);
-    const repo = this.connection.repository('crmQuotes');
+    const repo = this.repository('crmQuotes');
     const filter = { opportunityId };
     return {
       data: (
@@ -228,16 +235,14 @@ export class SalesService {
   }
   async quote(customerId: string, opportunityId: string, id: string) {
     await this.opportunity(customerId, opportunityId);
-    const record = await this.connection
-      .repository('crmQuotes')
-      .findOne({ filter: { id, opportunityId } });
+    const record = await this.repository('crmQuotes').findOne({
+      filter: { id, opportunityId },
+    });
     if (!record) throw missing();
-    const lines = await this.connection
-      .repository('crmQuoteLines')
-      .findMany({
-        filter: { quoteId: id },
-        sort: (s) => [s.field('position').asc()],
-      });
+    const lines = await this.repository('crmQuoteLines').findMany({
+      filter: { quoteId: id },
+      sort: (s) => [s.field('position').asc()],
+    });
     return {
       ...quoteResult(record),
       lines: lines.map((line) =>
@@ -291,6 +296,7 @@ export class SalesService {
       lines.push({
         id: randomUUID(),
         quoteId,
+        customerId,
         productId: line.productId,
         productName: oldLine?.productName ?? product.name,
         productCode: oldLine?.productCode ?? product.code,
@@ -306,27 +312,26 @@ export class SalesService {
       0,
     );
     const now = new Date().toISOString();
-    const repo = this.connection.repository('crmQuotes');
+    const repo = this.repository('crmQuotes');
     const values = { name: input.name, totalCents, updatedAt: now };
     if (id) {
       await repo.updateOne({ filter: { id, opportunityId }, values });
-      await this.connection
-        .repository('crmQuoteLines')
-        .deleteMany({ filter: { quoteId } });
+      await this.repository('crmQuoteLines').deleteMany({
+        filter: { quoteId },
+      });
     } else
       await repo.createOne({
         values: {
           id: quoteId,
           opportunityId,
+          customerId,
           currency: 'USD',
           ...values,
           createdAt: now,
         },
       });
     for (const line of lines)
-      await this.connection
-        .repository('crmQuoteLines')
-        .createOne({ values: line });
+      await this.repository('crmQuoteLines').createOne({ values: line });
     return this.quote(customerId, opportunityId, quoteId);
   }
 }

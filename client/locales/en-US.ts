@@ -8,6 +8,58 @@ const enUS = {
   // `./system/` so a template upgrade can replace it without touching the application's copy below.
   ...systemEnUS,
   ...fileUi,
+  crmAccess: {
+    records: 'Customer records',
+    view: 'View',
+    owned: 'Customers I own',
+    selectedCustomer: 'Selected customer and related records',
+    manager: 'Sales manager',
+    sales: 'Sales',
+    quoteLines: 'Quote lines',
+
+    manageSharing: 'Manage customer sharing',
+    shareCustomerDescription:
+      'Grant or revoke read-only customer access for selected CRM team members.',
+    readOnlyShared:
+      'Read-only shared access. You can view this customer and its related records, but cannot change them.',
+
+    title: 'Ownership and sharing',
+    owner: 'Owner',
+    unassigned: 'Unassigned',
+    readOnly:
+      'Read-only access. You can view this customer and its related records, but cannot change them.',
+    deniedEdit: 'You do not have permission to make this change.',
+    assignOwner: 'Assign owner',
+    ownerHint:
+      'Choose a CRM team member. Unassigned customers remain available to sales managers.',
+    saveOwner: 'Save owner',
+    sharedWith: 'Read-only sharing',
+    shareHint:
+      'Select CRM team members who may read this customer. Clear a selection to revoke its shared access.',
+    saveSharing: 'Save sharing',
+    noUsers:
+      'Assign a CRM role to a user in System settings before selecting them here.',
+    viewDescription:
+      'Read customers and their related records in the selected scope.',
+    createCustomerDescription:
+      'Create a customer assigned to the current user.',
+    editCustomerDescription:
+      'Update customer details within the allowed scope.',
+    addContactDescription: 'Add a contact to an editable customer.',
+    editContactDescription: 'Update a contact of an editable customer.',
+    recordFollowUpDescription:
+      'Record a conversation with an editable customer.',
+    createOpportunityDescription:
+      'Create an opportunity for an editable customer.',
+    editOpportunityDescription:
+      'Update an opportunity of an editable customer.',
+    createQuoteDescription: 'Prepare a quote for an editable customer.',
+    editQuoteDescription: 'Update a quote and its saved price snapshots.',
+    assignOwnerDescription: 'Assign the responsible CRM team member.',
+    productViewDescription: 'Read products and current catalogue prices.',
+    productCreateDescription: 'Add a product to the catalogue.',
+    productEditDescription: 'Update product details and current prices.',
+  },
   workspace: {
     title: 'Sales workspace',
     description:
@@ -59,6 +111,8 @@ const enUS = {
     next: 'Next products',
   },
   crm: {
+    editContact: 'Edit contact',
+
     title: 'Customers',
     description: 'Keep customer details, contacts and conversations together.',
     name: 'Customer name',

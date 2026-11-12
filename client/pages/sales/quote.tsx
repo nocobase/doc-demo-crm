@@ -10,6 +10,7 @@ import { Card, CardContent } from '#components/ui/card';
 import { DataTable } from '#components/data-table';
 import { Loading } from '#components/loading';
 import { useListData } from '#hooks/use-list-data';
+import { useCustomerOperation } from '#hooks/use-crm-access';
 import { ReadError } from '../customers/shared.js';
 import {
   money,
@@ -20,6 +21,7 @@ import {
 export default function QuoteDetail() {
   const { t } = useTranslation();
   const { customerId, opportunityId, quoteId } = useParams();
+  const access = useCustomerOperation(customerId, 'editQuote');
   const owner = useOutletContext<SalesContext>();
   const opportunityPath = `/customers/${customerId}/details/opportunities/${opportunityId}`;
   const request = useListData<{ data: Quote }>(
@@ -66,7 +68,7 @@ export default function QuoteDetail() {
           title={quote?.name ?? t('sales.quotes')}
           description={t('sales.snapshotHint')}
           actions={
-            quote ? (
+            quote && access.allowed ? (
               <Button nativeButton={false} render={<Link to='edit' />}>
                 {t('sales.editQuote')}
               </Button>

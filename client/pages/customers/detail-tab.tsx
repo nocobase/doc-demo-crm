@@ -8,6 +8,9 @@ import { Button } from '#components/ui/button';
 import { DataTable } from '#components/data-table';
 import { Loading } from '#components/loading';
 import { useListData } from '#hooks/use-list-data';
+import { useCustomerOperation } from '#hooks/use-crm-access';
+import { CustomerAccessPanel } from './access-panel.js';
+import { ReadError } from './shared.js';
 import { SalesRelated } from '../sales/lists.js';
 import type {
   CustomerContext,
@@ -25,33 +28,40 @@ export default function CustomerTab() {
   return (
     <>
       {tab === 'overview' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('crm.overview')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className='grid gap-4 sm:grid-cols-2'>
-              {[
-                ['industry', customer.industry],
-                ['status', t(`crm.${customer.status}`)],
-                ['website', customer.website],
-                ['notes', customer.notes],
-              ].map(([key, value]) => (
-                <div
-                  key={key}
-                  className={key === 'notes' ? 'sm:col-span-2' : ''}
-                >
-                  <dt className='text-sm text-muted-foreground'>
-                    {t(`crm.${key}`)}
-                  </dt>
-                  <dd className='mt-1 whitespace-pre-wrap break-words'>
-                    {value || t('crm.notProvided')}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </CardContent>
-        </Card>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('crm.overview')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className='grid gap-4 sm:grid-cols-2'>
+                {[
+                  ['industry', customer.industry],
+                  ['status', t(`crm.${customer.status}`)],
+                  ['website', customer.website],
+                  ['notes', customer.notes],
+                ].map(([key, value]) => (
+                  <div
+                    key={key}
+                    className={key === 'notes' ? 'sm:col-span-2' : ''}
+                  >
+                    <dt className='text-sm text-muted-foreground'>
+                      {t(`crm.${key}`)}
+                    </dt>
+                    <dd className='mt-1 whitespace-pre-wrap break-words'>
+                      {value || t('crm.notProvided')}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </CardContent>
+          </Card>
+          <CustomerAccessPanel
+            customerId={customer.id}
+            revision={revision}
+            reload={context.reload}
+          />
+        </>
       ) : tab === 'opportunities' ? (
         <SalesRelated
           customerId={customer.id}
@@ -79,6 +89,10 @@ function Related({
   revision: number;
 }) {
   const { t, i18n } = useTranslation();
+  const access = useCustomerOperation(
+    customerId,
+    kind === 'contacts' ? 'addContact' : 'recordFollowUp',
+  );
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
   const path = `crm/customers/${customerId}/${kind}?page=${pagination.pageIndex + 1}&revision=${revision}`;
   const request = useListData<ListResult<Contact & FollowUp>>(path);
@@ -131,7 +145,7 @@ function Related({
           },
           { accessorKey: 'authorName', header: t('crm.author') },
         ];
-  const action = (
+  const action = access.allowed ? (
     <Button
       variant='outline'
       nativeButton={false}
@@ -139,9 +153,12 @@ function Related({
     >
       {t(kind === 'contacts' ? 'crm.newContact' : 'crm.newFollowUp')}
     </Button>
-  );
+  ) : undefined;
   return (
     <section className='space-y-3' aria-label={t(`crm.${kind}`)}>
+      {access.error ? (
+        <ReadError error={access.error} retry={access.reload} />
+      ) : null}
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <h2 className='text-lg font-semibold'>{t(`crm.${kind}`)}</h2>
         {state === 'empty' ? null : action}

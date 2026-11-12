@@ -1,3 +1,4 @@
+import { scopedRepository, type CrmPolicies } from './crm-permissions.js';
 import type { DatabaseConnection } from '@nocobase/db';
 import { z } from 'zod';
 
@@ -42,11 +43,17 @@ export const Workspace = z.object({
 
 /** Bounded record previews plus exact counts; no client-side full-table scan. */
 export class WorkspaceService {
-  constructor(private readonly connection: DatabaseConnection) {}
+  constructor(
+    private readonly connection: DatabaseConnection,
+    private readonly policies: CrmPolicies,
+  ) {}
+  private repository(name: string) {
+    return scopedRepository(this.connection, this.policies, name);
+  }
   async read() {
-    const customers = this.connection.repository('crmCustomers');
-    const opportunities = this.connection.repository('crmOpportunities');
-    const quotes = this.connection.repository('crmQuotes');
+    const customers = this.repository('crmCustomers');
+    const opportunities = this.repository('crmOpportunities');
+    const quotes = this.repository('crmQuotes');
     const [
       customerCount,
       opportunityCount,
@@ -58,7 +65,7 @@ export class WorkspaceService {
       customers.count(),
       opportunities.count(),
       quotes.count(),
-      this.connection.repository('crmFollowUps').findMany({
+      this.repository('crmFollowUps').findMany({
         limit: 5,
         sort: (s) => [s.field('createdAt').desc(), s.field('id').asc()],
       }),
@@ -66,21 +73,13 @@ export class WorkspaceService {
         limit: 5,
         sort: (s) => [s.field('updatedAt').desc(), s.field('id').asc()],
         select: (s) =>
-          s
-            .fields('id', 'name', 'customerId', 'stage', 'updatedAt')
-            .include('customer', (c) => c.fields('id', 'name')),
+          s.fields('id', 'name', 'customerId', 'stage', 'updatedAt'),
       }),
       quotes.findMany({
         limit: 5,
         sort: (s) => [s.field('updatedAt').desc(), s.field('id').asc()],
         select: (s) =>
-          s
-            .fields('id', 'name', 'totalCents', 'updatedAt')
-            .include('opportunity', (o) =>
-              o
-                .fields('id', 'name', 'customerId')
-                .include('customer', (c) => c.fields('id', 'name')),
-            ),
+          s.fields('id', 'name', 'opportunityId', 'totalCents', 'updatedAt'),
       }),
     ]);
     // Follow-ups predate Collection relation metadata. Resolve only the five
@@ -100,12 +99,36 @@ export class WorkspaceService {
         opportunities: opportunityCount,
         quotes: quoteCount,
       },
-      followUps: recentFollowUps,
-      opportunities: recentOpportunities,
-      quotes: recentQuotes.map((record) => ({
-        ...record,
-        total: Number(record.totalCents) / 100,
-      })),
+      followUps: recentFollowUps.filter((record) => record.customer),
+      opportunities: (
+        await Promise.all(
+          recentOpportunities.map(async (record) => ({
+            ...record,
+            customer: await customers.findOne({
+              filter: { id: z.string().parse(record.customerId) },
+            }),
+          })),
+        )
+      ).filter((record) => record.customer),
+      quotes: (
+        await Promise.all(
+          recentQuotes.map(async (record) => {
+            const opportunity = await opportunities.findOne({
+              filter: { id: z.string().parse(record.opportunityId) },
+            });
+            const customer = opportunity
+              ? await customers.findOne({
+                  filter: { id: z.string().parse(opportunity.customerId) },
+                })
+              : null;
+            return {
+              ...record,
+              total: Number(record.totalCents) / 100,
+              opportunity: { ...opportunity, customer },
+            };
+          }),
+        )
+      ).filter((record) => record.opportunity.customer),
     });
   }
 }

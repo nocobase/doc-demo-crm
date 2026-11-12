@@ -9,12 +9,14 @@ import { Button } from '#components/ui/button';
 import { Card, CardContent } from '#components/ui/card';
 import { Loading } from '#components/loading';
 import { useListData } from '#hooks/use-list-data';
+import { useCustomerOperation } from '#hooks/use-crm-access';
 import { ReadError } from '../customers/shared.js';
 import { SalesRelated } from './lists.js';
 import type { Opportunity, SalesContext } from './types.js';
 export default function OpportunityDetail() {
   const { t } = useTranslation();
   const { customerId, opportunityId } = useParams();
+  const access = useCustomerOperation(customerId, 'editOpportunity');
   const owner = useOutletContext<SalesContext>();
   const request = useListData<{ data: Opportunity }>(
     `crmSales/customers/${customerId}/opportunities/${opportunityId}`,
@@ -37,7 +39,7 @@ export default function OpportunityDetail() {
         <PageHeader
           title={opportunity?.name ?? t('sales.opportunities')}
           actions={
-            opportunity ? (
+            opportunity && access.allowed ? (
               <Button nativeButton={false} render={<Link to='edit' />}>
                 {t('sales.editOpportunity')}
               </Button>

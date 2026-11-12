@@ -1,3 +1,5 @@
+import { authorizeCrm } from '../providers/crm-permissions.js';
+import { CrmService } from '../providers/crm.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
   authenticationToken,
@@ -31,10 +33,6 @@ import {
   SalesListInput,
 } from '../providers/sales.js';
 
-const access = {
-  resource: { type: 'page', id: 'customers' },
-  action: 'access',
-} as const;
 const Params = z.object({
   customerId: z.uuid().optional(),
   opportunityId: z.uuid().optional(),
@@ -46,18 +44,16 @@ const quotes = `${opportunities}/:opportunityId/quotes`;
 export default defineApiRoutes(async (app: Application) => {
   const router = new Hono<AuthEnv & AuthorizationEnv>();
   const connection = app.container.resolve(databaseManagerToken).connection();
-  const service = new SalesService(connection);
   router.onError(apiErrorHandler);
   // The dedicated mount contains only the sales model endpoints.
-  router.use(
-    '*',
-    app.container.resolve(authenticationToken).required({ scopedKeys: false }),
-    app.container.resolve(authorizationToken).middleware(),
-    async (c, next) => {
-      await c.get('authz').require(access);
-      await next();
-    },
-  );
+  for (const path of ['/products', '/products/*', '/customers/*'])
+    router.use(
+      path,
+      app.container
+        .resolve(authenticationToken)
+        .required({ scopedKeys: false }),
+      app.container.resolve(authorizationToken).middleware(),
+    );
   for (const kind of ['products', 'opportunities', 'quotes'] as const) {
     const base =
       kind === 'products'
@@ -73,6 +69,14 @@ export default defineApiRoutes(async (app: Application) => {
           : Quote;
     router.get(
       base,
+      async (c, next) => {
+        await authorizeCrm(
+          c.get('authz'),
+          'view',
+          kind === 'products' ? 'crm.products' : 'crm.records',
+        );
+        await next();
+      },
       describeRoute({
         tags: ['CRM sales'],
         summary: `List ${kind}`,
@@ -83,6 +87,14 @@ export default defineApiRoutes(async (app: Application) => {
       async (c) => {
         const { customerId, opportunityId } = c.req.valid('param');
         const input = c.req.valid('query');
+        const service = new SalesService(
+          connection,
+          await authorizeCrm(
+            c.get('authz'),
+            'view',
+            kind === 'products' ? 'crm.products' : 'crm.records',
+          ),
+        );
         return c.json(
           kind === 'products'
             ? await service.products(input)
@@ -94,6 +106,14 @@ export default defineApiRoutes(async (app: Application) => {
     );
     router.get(
       `${base}/:id`,
+      async (c, next) => {
+        await authorizeCrm(
+          c.get('authz'),
+          'view',
+          kind === 'products' ? 'crm.products' : 'crm.records',
+        );
+        await next();
+      },
       describeRoute({
         tags: ['CRM sales'],
         summary: `Read ${kind}`,
@@ -102,6 +122,14 @@ export default defineApiRoutes(async (app: Application) => {
       apiValidator('param', Params),
       async (c) => {
         const { customerId, opportunityId, id } = c.req.valid('param');
+        const service = new SalesService(
+          connection,
+          await authorizeCrm(
+            c.get('authz'),
+            'view',
+            kind === 'products' ? 'crm.products' : 'crm.records',
+          ),
+        );
         return c.json({
           data:
             kind === 'products'
@@ -124,6 +152,26 @@ export default defineApiRoutes(async (app: Application) => {
       router.on(
         update ? 'PATCH' : 'POST',
         update ? `${base}/:id` : base,
+        async (c, next) => {
+          const action =
+            kind === 'products'
+              ? update
+                ? 'edit'
+                : 'create'
+              : kind === 'opportunities'
+                ? update
+                  ? 'editOpportunity'
+                  : 'createOpportunity'
+                : update
+                  ? 'editQuote'
+                  : 'createQuote';
+          await authorizeCrm(
+            c.get('authz'),
+            action,
+            kind === 'products' ? 'crm.products' : 'crm.records',
+          );
+          await next();
+        },
         describeRoute({
           tags: ['CRM sales'],
           summary: `${update ? 'Update' : 'Create'} ${kind}`,
@@ -151,6 +199,27 @@ export default defineApiRoutes(async (app: Application) => {
         async (c) => {
           const { customerId, opportunityId, id } = c.req.valid('param');
           const input = c.req.valid('json');
+          const action =
+            kind === 'products'
+              ? update
+                ? 'edit'
+                : 'create'
+              : kind === 'opportunities'
+                ? update
+                  ? 'editOpportunity'
+                  : 'createOpportunity'
+                : update
+                  ? 'editQuote'
+                  : 'createQuote';
+          const policies = await authorizeCrm(
+            c.get('authz'),
+            action,
+            kind === 'products' ? 'crm.products' : 'crm.records',
+          );
+          const assertAccess = async () => {
+            if (customerId)
+              await new CrmService(connection, policies).get(customerId);
+          };
           const result = await executeIdempotentMutation({
             connection,
             key: c.req.valid('header')['idempotency-key'],
@@ -158,13 +227,19 @@ export default defineApiRoutes(async (app: Application) => {
             operation: `crmSales/${kind}/${customerId ?? ''}/${opportunityId ?? ''}/${id ?? 'new'}`,
             input,
             authorize: async () => {
-              await c.get('authz').require(access);
+              await assertAccess();
             },
-            authorizeReplay: async () => {
-              await c.get('authz').require(access);
+            authorizeReplay: async (record) => {
+              await assertAccess();
+              const savedId = z.object({ id: z.string() }).parse(record).id;
+              const service = new SalesService(connection, policies);
+              if (kind === 'products') await service.product(savedId);
+              else if (kind === 'opportunities')
+                await service.opportunity(customerId!, savedId);
+              else await service.quote(customerId!, opportunityId!, savedId);
             },
             execute: (tx) => {
-              const sales = new SalesService(tx);
+              const sales = new SalesService(tx, policies);
               return kind === 'products'
                 ? sales.saveProduct(ProductInput.parse(input), id)
                 : kind === 'opportunities'

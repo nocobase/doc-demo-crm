@@ -1,3 +1,4 @@
+import { authorizeCrm } from '../providers/crm-permissions.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
   authenticationToken,
@@ -20,9 +21,7 @@ import { Workspace, WorkspaceService } from '../providers/workspace.js';
 
 export default defineApiRoutes(async (app: Application) => {
   const router = new Hono<AuthEnv & AuthorizationEnv>();
-  const service = new WorkspaceService(
-    app.container.resolve(databaseManagerToken).connection(),
-  );
+  const connection = app.container.resolve(databaseManagerToken).connection();
   router.onError(apiErrorHandler);
   router.get(
     '/crm/workspace',
@@ -34,10 +33,10 @@ export default defineApiRoutes(async (app: Application) => {
       responses: { 200: dataResponse(Workspace), ...apiErrorResponses },
     }),
     async (c) => {
-      await c.get('authz').require({
-        resource: { type: 'page', id: 'customers' },
-        action: 'access',
-      });
+      const service = new WorkspaceService(
+        connection,
+        await authorizeCrm(c.get('authz'), 'view'),
+      );
       return c.json({ data: await service.read() });
     },
   );

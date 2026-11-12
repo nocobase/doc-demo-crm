@@ -19,7 +19,7 @@ export default defineSeed({
     const existing = await repository('crmQuotes').findOne({ filter: { id: quoteId } });
     // Never restore removed lines or overwrite an edited quote during sample reruns.
     if (existing) return;
-    await repository('crmQuotes').createOne({ values: { id: quoteId, opportunityId, name: 'Northstar team rollout', currency: 'USD', totalCents: 209600, createdAt: date, updatedAt: date } });
-    for (const [position, product] of products.slice(0, 2).entries()) await repository('crmQuoteLines').createOne({ values: { id: `00000000-0000-4000-8400-00000000000${position + 1}`, quoteId, productId: product.id, productName: product.name, productCode: product.code, position, quantity: position === 0 ? 12 : 1, unitPriceCents: product.unitPriceCents, discountBasisPoints: position === 0 ? 1000 : 0, amountCents: position === 0 ? 129600 : 80000 } });
+    await repository('crmQuotes').createOne({ values: { id: quoteId, opportunityId, customerId, name: 'Northstar team rollout', currency: 'USD', totalCents: 209600, createdAt: date, updatedAt: date } });
+    for (const [position, product] of products.slice(0, 2).entries()) await repository('crmQuoteLines').createOne({ values: { id: `00000000-0000-4000-8400-00000000000${position + 1}`, quoteId, customerId, productId: product.id, productName: product.name, productCode: product.code, position, quantity: position === 0 ? 12 : 1, unitPriceCents: product.unitPriceCents, discountBasisPoints: position === 0 ? 1000 : 0, amountCents: position === 0 ? 129600 : 80000 } });
   },
 });

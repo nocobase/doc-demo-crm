@@ -1,6 +1,6 @@
 # Tutorial CRM
 
-A cumulative NocoBase 3 CRM through Lesson 6. The interface
+A cumulative NocoBase 3 CRM through Lesson 7. The interface
 and sample business data default to English. Use Customers to manage customer
 details, contacts, follow-up records, opportunities and quotes. Products holds the price catalogue.
 
@@ -12,6 +12,7 @@ details, contacts, follow-up records, opportunities and quotes. Products holds t
 | `lesson-4` | Automated tests, build, local delivery and recovery | [Lesson 4](docs/lesson-4.md) |
 | `lesson-5` | Opportunities, product catalogue and quote snapshots | [Lesson 5](docs/lesson-5.md) |
 | `lesson-6` | Sales workspace and customer detail tabs | [Lesson 6](docs/lesson-6.md) |
+| `lesson-7` | Sales roles, ownership and read-only customer sharing | [Lesson 7](docs/lesson-7.md) |
 
 ```sh
 pnpm install --frozen-lockfile
@@ -29,6 +30,8 @@ Check out a stage with `git switch -c my-crm lesson-3`; compare stages with
 `git diff lesson-2..lesson-3`. Git changes code only: preserve or separately
 restore configuration, database and storage. [Verification](docs/verification.md)
 records the tested runtime and delivery boundaries.
+
+For team access, explicitly assign **Sales** or **Sales manager** to selected users in **System settings → Users**. Existing customers remain unassigned until a manager sets their owner. See [Lesson 7](docs/lesson-7.md) for access checks and the forward-only migration boundary.
 
 Read [the design](docs/design.md) and [the first-release prototype](docs/prototype.html) before changing business behavior. The prototype simulates interactions; use the running application to verify persistence and authorization.
 

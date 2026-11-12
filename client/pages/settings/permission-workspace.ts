@@ -34,7 +34,70 @@ export interface PermissionWorkspaceSelection {
 
 /** Add only business operations and configuration controls this application exposes. */
 export const permissionWorkspaceSelection: PermissionWorkspaceSelection = {
-  business: [],
+  business: [
+    {
+      type: 'composite',
+      id: 'crm.records',
+      scopeTitles: {
+        crmCustomers: { key: 'crm.title' },
+        crmContacts: { key: 'crm.contacts' },
+        crmFollowUps: { key: 'crm.followUps' },
+        crmOpportunities: { key: 'sales.opportunities' },
+        crmQuotes: { key: 'sales.quotes' },
+        crmQuoteLines: { key: 'crmAccess.quoteLines' },
+        crmProducts: { key: 'sales.products' },
+      },
+      hiddenActionScopes: {
+        createCustomer: ['customers'],
+        addContact: ['contacts'],
+        recordFollowUp: ['followUps'],
+        createOpportunity: ['opportunities'],
+        createQuote: ['quotes', 'lines'],
+      },
+      actions: [
+        'view',
+        'createCustomer',
+        'editCustomer',
+        'addContact',
+        'editContact',
+        'recordFollowUp',
+        'createOpportunity',
+        'editOpportunity',
+        'createQuote',
+        'editQuote',
+        'assignOwner',
+        'shareCustomer',
+      ],
+      actionDescriptions: Object.fromEntries(
+        [
+          'view',
+          'createCustomer',
+          'editCustomer',
+          'addContact',
+          'editContact',
+          'recordFollowUp',
+          'createOpportunity',
+          'editOpportunity',
+          'createQuote',
+          'editQuote',
+          'assignOwner',
+          'shareCustomer',
+        ].map((action) => [action, { key: `crmAccess.${action}Description` }]),
+      ),
+    },
+    {
+      type: 'composite',
+      id: 'crm.products',
+      scopeTitles: { crmProducts: { key: 'sales.products' } },
+      hiddenActionScopes: { create: ['products'] },
+      actions: ['view', 'create', 'edit'],
+      actionDescriptions: {
+        view: { key: 'crmAccess.productViewDescription' },
+        create: { key: 'crmAccess.productCreateDescription' },
+        edit: { key: 'crmAccess.productEditDescription' },
+      },
+    },
+  ],
   settings: [
     {
       id: 'authorization.permission-sets',

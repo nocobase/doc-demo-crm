@@ -12,6 +12,8 @@ import { Button } from '#components/ui/button';
 import { Input } from '#components/ui/input';
 import { useListLocation } from '#hooks/use-list-location';
 import { useListData } from '#hooks/use-list-data';
+import { useCrmAccess } from '#hooks/use-crm-access';
+import { ReadError } from './shared.js';
 import {
   readTableUrlState,
   useTableUrlState,
@@ -21,6 +23,7 @@ import type { Customer, ListResult } from './types.js';
 
 export default function CustomersPage() {
   const { t } = useTranslation();
+  const access = useCrmAccess();
   const { active, params, setParams } = useListLocation();
   const [draft, setDraft] = useState(params.get('q') ?? '');
   const status = ['prospect', 'customer', 'inactive'].includes(
@@ -92,14 +95,14 @@ export default function CustomersPage() {
     ],
     [t],
   );
-  const create = (
+  const create = access.access?.createCustomer ? (
     <Button
       nativeButton={false}
       render={<Link to={{ pathname: 'new', search: params.toString() }} />}
     >
       {t('crm.newCustomer')}
     </Button>
-  );
+  ) : undefined;
   const updateFilter = (key: string, value: string) => {
     setParams((old) => {
       const next = new URLSearchParams(old);
@@ -116,6 +119,9 @@ export default function CustomersPage() {
         description={t('crm.description')}
         actions={state === 'empty' ? undefined : create}
       />
+      {access.error ? (
+        <ReadError error={access.error} retry={access.reload} />
+      ) : null}
       <form
         className='flex flex-wrap items-center gap-2'
         onSubmit={(event) => {

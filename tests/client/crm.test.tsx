@@ -5,11 +5,15 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router';
 import { expect, it } from 'vitest';
-import { renderSettingsClient } from '../helpers/settings-client.js';
+import {
+  renderCrmClient,
+  type CrmClientFixture,
+} from '../helpers/crm-client.js';
 import CustomersPage from '../../client/pages/customers/index.js';
 import CustomerTab from '../../client/pages/customers/detail-tab.js';
 import CustomerDetail from '../../client/pages/customers/detail.js';
 import CrmEditor from '../../client/pages/customers/edit.js';
+import SalesEditor from '../../client/pages/sales/edit.js';
 import { RouteTreeProvider } from '../../client/routing/route-context.js';
 import applicationRoutes from '../../client/routes.js';
 import enUS from '../../client/locales/en-US.js';
@@ -33,8 +37,9 @@ function mount(
   fetch: typeof globalThis.fetch,
   route = '/customers',
   locale = 'en-US',
+  fixture: CrmClientFixture = {},
 ) {
-  return renderSettingsClient(
+  return renderCrmClient(
     <RouteTreeProvider routes={routes}>
       <PageBreadcrumbProvider>
         <Routes>
@@ -50,6 +55,15 @@ function mount(
                   </Route>
                 ),
               )}
+              {[
+                'newOpportunity',
+                'opportunities/newOpportunity',
+                'opportunities/:opportunityId/edit',
+                'opportunities/:opportunityId/newQuote',
+                'opportunities/:opportunityId/quotes/:quoteId/edit',
+              ].map((path) => (
+                <Route key={path} path={path} element={<SalesEditor />} />
+              ))}
               <Route path='edit' element={<CrmEditor />} />
               <Route path='newContact' element={<CrmEditor />} />
               <Route path='newFollowUp' element={<CrmEditor />} />
@@ -70,6 +84,7 @@ function mount(
         },
       },
     },
+    fixture,
   );
 }
 const list = (data = [customer]) => ({
@@ -116,9 +131,10 @@ it('validates the customer form and submits a protected write', async () => {
     }),
     '/customers/new',
   );
-  const dialog = await screen.findByRole('dialog');
+  await screen.findByRole('button', { name: 'Save', exact: true });
+  const dialog = screen.getByRole('dialog');
   await userEvent.click(
-    within(dialog).getByRole('button', { name: 'Save', exact: true }),
+    await within(dialog).findByRole('button', { name: 'Save', exact: true }),
   );
   expect(
     await screen.findByText('This field is required.'),
@@ -129,7 +145,7 @@ it('validates the customer form and submits a protected write', async () => {
     'New account',
   );
   await userEvent.click(
-    within(dialog).getByRole('button', { name: 'Save', exact: true }),
+    await within(dialog).findByRole('button', { name: 'Save', exact: true }),
   );
   await screen.findByRole('link', { name: 'New account' });
   expect(saved).toBe(true);
@@ -313,17 +329,126 @@ it('opens a contact form by URL and returns to its Contacts tab after saving', a
     }),
     `/customers/${customer.id}/details/contacts/newContact`,
   );
-  const dialog = await screen.findByRole('dialog');
+  await screen.findByRole('button', { name: 'Save', exact: true });
+  const dialog = screen.getByRole('dialog');
   await userEvent.type(
-    within(dialog).getByRole('textbox', { name: 'Contact name' }),
+    await within(dialog).findByRole('textbox', { name: 'Contact name' }),
     'Taylor Reed',
   );
   await userEvent.click(
-    within(dialog).getByRole('button', { name: 'Save', exact: true }),
+    await within(dialog).findByRole('button', { name: 'Save', exact: true }),
   );
   expect(await screen.findByText('Taylor Reed')).toBeInTheDocument();
   expect(
     await screen.findByRole('tab', { name: 'Contacts', exact: true }),
   ).toHaveAttribute('aria-selected', 'true');
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+const sharedFixture: CrmClientFixture = {
+  customerAccess: {
+    edit: false,
+    shared: true,
+    ownerId: 'another-sales-user',
+    ownerName: 'Alex Morgan',
+  },
+};
+const detailApi = () =>
+  answerApi(({ path }) => {
+    if (path === `crm/customers/${customer.id}`) return { data: customer };
+    if (path === 'crm/customers') return list();
+    return { data: [], meta: { total: 0, page: 1, pageSize: 20 } };
+  });
+it('shows shared read-only access and owner while hiding customer and related write entries', async () => {
+  await mount(
+    detailApi(),
+    `/customers/${customer.id}/details/overview`,
+    'en-US',
+    sharedFixture,
+  );
+  expect(
+    await screen.findByText(/Read-only shared access/),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Alex Morgan')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Edit customer' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Save owner' }),
+  ).not.toBeInTheDocument();
+  for (const [tab, action] of [
+    ['Contacts', 'Add contact'],
+    ['Follow-up records', 'Record follow-up'],
+    ['Opportunities', 'New opportunity'],
+  ]) {
+    await userEvent.click(screen.getByRole('tab', { name: tab, exact: true }));
+    await screen.findByRole('heading', { name: tab, exact: true });
+    expect(
+      screen.queryByRole('button', { name: action, exact: true }),
+    ).not.toBeInTheDocument();
+  }
+});
+it.each([
+  'edit',
+  'newContact',
+  'newFollowUp',
+  'overview/edit',
+  'contacts/newContact',
+  'followUps/newFollowUp',
+  'newOpportunity',
+  'opportunities/newOpportunity',
+  'opportunities/opp-1/edit',
+  'opportunities/opp-1/newQuote',
+  'opportunities/opp-1/quotes/quote-1/edit',
+])(
+  'blocks direct shared-customer form URL %s without mounting writable fields',
+  async (suffix) => {
+    await mount(
+      detailApi(),
+      `/customers/${customer.id}/details/${suffix}`,
+      'en-US',
+      sharedFixture,
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      await within(dialog).findByText(
+        'You do not have permission to make this change.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: 'Save', exact: true }),
+    ).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+  },
+);
+it('checks each operation independently rather than assuming editable means every write is granted', async () => {
+  await mount(
+    detailApi(),
+    `/customers/${customer.id}/details/contacts`,
+    'en-US',
+    {
+      recordActions: ['view', 'addContact'],
+      customerAccess: {
+        edit: false,
+        actions: { editCustomer: false, addContact: true },
+      },
+    },
+  );
+  expect(
+    await screen.findByRole('button', { name: 'Add contact' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Edit customer' }),
+  ).not.toBeInTheDocument();
+});
+it('blocks the new-customer URL when a page-only reader has no create operation', async () => {
+  await mount(detailApi(), '/customers/new', 'en-US', {
+    recordActions: ['view'],
+  });
+  expect(
+    await screen.findByText('You do not have permission to make this change.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('textbox', { name: 'Customer name' }),
+  ).not.toBeInTheDocument();
 });
