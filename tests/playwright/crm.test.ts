@@ -56,6 +56,7 @@ test('customer → contact → follow-up → search survives a browser reload', 
     .getByRole('button', { name: 'Save', exact: true })
     .click();
   await expect(page.getByText('Data services', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Contacts', exact: true }).click();
   await page.getByRole('button', { name: 'Add contact', exact: true }).click();
   await page
     .getByRole('dialog', { name: 'Add contact', exact: true })
@@ -75,6 +76,9 @@ test('customer → contact → follow-up → search survives a browser reload', 
     .click();
   await expect(page.getByText('Alex Morgan', { exact: true })).toBeVisible();
   await page
+    .getByRole('tab', { name: 'Follow-up records', exact: true })
+    .click();
+  await page
     .getByRole('button', { name: 'Record follow-up', exact: true })
     .click();
   await page
@@ -93,10 +97,18 @@ test('customer → contact → follow-up → search survives a browser reload', 
     page.getByText('Discussed the sales team requirements.', { exact: true }),
   ).toBeVisible();
   await page.reload();
-  await expect(page.getByText('Alex Morgan', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('tab', { name: 'Follow-up records' }),
+  ).toHaveAttribute('aria-selected', 'true');
   await expect(
     page.getByText('Prepare a product walkthrough.', { exact: true }),
   ).toBeVisible();
+  await page.getByRole('tab', { name: 'Contacts', exact: true }).click();
+  await expect(page.getByText('Alex Morgan', { exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(
+    page.getByRole('tab', { name: 'Follow-up records' }),
+  ).toHaveAttribute('aria-selected', 'true');
   const health = await page.request.get(new URL('api/healthz', appUrl).href);
   expect(health.ok()).toBe(true);
   expect(errors).toEqual([]);

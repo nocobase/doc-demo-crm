@@ -3,11 +3,12 @@ import { createAppClientConfig } from '@nocobase/app-client';
 import { readAppClientRuntimeConfig } from '@nocobase/app-client/runtime';
 import { includeNotificationTemplateRoutes } from './pages/settings/notification-routes.js';
 import systemSettingsRoutes from './pages/settings/routes.js';
-import { Home, Building2, Package } from 'lucide-react';
+import { Home, Building2, Package, LayoutDashboard } from 'lucide-react';
 import settingsShellRoutes from './pages/settings/shell-routes.js';
 import {
   defineAppRoutes,
   type AppClientRouteContribution,
+  type AppClientRouteDefinition,
 } from '@nocobase/app-client/plugins';
 
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
@@ -23,6 +24,14 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     path: '/',
   },
   {
+    name: 'sales-workspace',
+    path: '/sales',
+    auth: 'required',
+    authz: { resource: { type: 'page', id: 'customers' }, action: 'access' },
+    navigation: { title: 'workspace.title', icon: LayoutDashboard },
+    componentLoader: () => import('./pages/sales-workspace/index.js'),
+  },
+  {
     name: 'customers',
     path: '/customers',
     auth: 'required',
@@ -33,7 +42,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       {
         name: 'customers-new',
         path: 'new',
-        presentation: { kind: 'dialog', title: 'crm.newCustomer' },
+        presentation: { kind: 'dialog' as const, title: 'crm.newCustomer' },
         componentLoader: () => import('./pages/customers/edit.js'),
       },
       {
@@ -42,65 +51,142 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         breadcrumb: { title: 'crm.detail' },
         componentLoader: () => import('./pages/customers/detail.js'),
         children: [
+          ...(
+            ['overview', 'contacts', 'followUps', 'opportunities'] as const
+          ).map((tab): AppClientRouteDefinition => ({
+            name: `customers-tab-${tab}`,
+            path: tab,
+            componentLoader: () => import('./pages/customers/detail-tab.js'),
+            children: [
+              {
+                name: `customers-tab-${tab}-edit`,
+                path: 'edit',
+                presentation: {
+                  kind: 'dialog' as const,
+                  title: 'crm.editCustomer',
+                },
+                componentLoader: () => import('./pages/customers/edit.js'),
+              },
+              ...(tab === 'contacts'
+                ? [
+                    {
+                      name: 'customers-tab-contact-new',
+                      path: 'newContact',
+                      presentation: {
+                        kind: 'dialog' as const,
+                        title: 'crm.newContact',
+                      },
+                      componentLoader: () =>
+                        import('./pages/customers/edit.js'),
+                    },
+                  ]
+                : []),
+              ...(tab === 'followUps'
+                ? [
+                    {
+                      name: 'customers-tab-followup-new',
+                      path: 'newFollowUp',
+                      presentation: {
+                        kind: 'dialog' as const,
+                        title: 'crm.newFollowUp',
+                      },
+                      componentLoader: () =>
+                        import('./pages/customers/edit.js'),
+                    },
+                  ]
+                : []),
+              ...(tab === 'opportunities'
+                ? [
+                    {
+                      name: 'customers-tab-opportunity-new',
+                      path: 'newOpportunity',
+                      presentation: {
+                        kind: 'dialog' as const,
+                        title: 'sales.newOpportunity',
+                      },
+                      componentLoader: () => import('./pages/sales/edit.js'),
+                    },
+                    {
+                      name: 'sales-opportunity',
+                      path: ':opportunityId',
+                      breadcrumb: { title: 'sales.opportunities' },
+                      componentLoader: () =>
+                        import('./pages/sales/opportunity.js'),
+                      children: [
+                        {
+                          name: 'sales-opportunity-edit',
+                          path: 'edit',
+                          presentation: {
+                            kind: 'dialog' as const,
+                            title: 'sales.editOpportunity',
+                          },
+                          componentLoader: () =>
+                            import('./pages/sales/edit.js'),
+                        },
+                        {
+                          name: 'sales-quote-new',
+                          path: 'newQuote',
+                          presentation: {
+                            kind: 'dialog' as const,
+                            title: 'sales.newQuote',
+                          },
+                          componentLoader: () =>
+                            import('./pages/sales/edit.js'),
+                        },
+                        {
+                          name: 'sales-quote',
+                          path: 'quotes/:quoteId',
+                          breadcrumb: { title: 'sales.quotes' },
+                          componentLoader: () =>
+                            import('./pages/sales/quote.js'),
+                          children: [
+                            {
+                              name: 'sales-quote-edit',
+                              path: 'edit',
+                              presentation: {
+                                kind: 'dialog' as const,
+                                title: 'sales.editQuote',
+                              },
+                              componentLoader: () =>
+                                import('./pages/sales/edit.js'),
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ]
+                : []),
+            ],
+          })),
+
           {
             name: 'sales-opportunity-new',
             path: 'newOpportunity',
-            presentation: { kind: 'dialog', title: 'sales.newOpportunity' },
+            presentation: {
+              kind: 'dialog' as const,
+              title: 'sales.newOpportunity',
+            },
             componentLoader: () => import('./pages/sales/edit.js'),
-          },
-          {
-            name: 'sales-opportunity',
-            path: 'opportunities/:opportunityId',
-            breadcrumb: { title: 'sales.opportunities' },
-            componentLoader: () => import('./pages/sales/opportunity.js'),
-            children: [
-              {
-                name: 'sales-opportunity-edit',
-                path: 'edit',
-                presentation: {
-                  kind: 'dialog',
-                  title: 'sales.editOpportunity',
-                },
-                componentLoader: () => import('./pages/sales/edit.js'),
-              },
-              {
-                name: 'sales-quote-new',
-                path: 'newQuote',
-                presentation: { kind: 'dialog', title: 'sales.newQuote' },
-                componentLoader: () => import('./pages/sales/edit.js'),
-              },
-              {
-                name: 'sales-quote',
-                path: 'quotes/:quoteId',
-                breadcrumb: { title: 'sales.quotes' },
-                componentLoader: () => import('./pages/sales/quote.js'),
-                children: [
-                  {
-                    name: 'sales-quote-edit',
-                    path: 'edit',
-                    presentation: { kind: 'dialog', title: 'sales.editQuote' },
-                    componentLoader: () => import('./pages/sales/edit.js'),
-                  },
-                ],
-              },
-            ],
           },
           {
             name: 'customers-edit',
             path: 'edit',
-            presentation: { kind: 'dialog', title: 'crm.editCustomer' },
+            presentation: {
+              kind: 'dialog' as const,
+              title: 'crm.editCustomer',
+            },
             componentLoader: () => import('./pages/customers/edit.js'),
           },
           {
             name: 'customers-contact-new',
             path: 'newContact',
-            presentation: { kind: 'dialog', title: 'crm.newContact' },
+            presentation: { kind: 'dialog' as const, title: 'crm.newContact' },
             componentLoader: () => import('./pages/customers/edit.js'),
           },
           {
             name: 'customers-followup-new',
             path: 'newFollowUp',
-            presentation: { kind: 'dialog', title: 'crm.newFollowUp' },
+            presentation: { kind: 'dialog' as const, title: 'crm.newFollowUp' },
             componentLoader: () => import('./pages/customers/edit.js'),
           },
         ],
@@ -118,13 +204,13 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       {
         name: 'products-new',
         path: 'new',
-        presentation: { kind: 'dialog', title: 'sales.newProduct' },
+        presentation: { kind: 'dialog' as const, title: 'sales.newProduct' },
         componentLoader: () => import('./pages/sales/edit.js'),
       },
       {
         name: 'products-edit',
         path: ':productId/edit',
-        presentation: { kind: 'dialog', title: 'sales.editProduct' },
+        presentation: { kind: 'dialog' as const, title: 'sales.editProduct' },
         componentLoader: () => import('./pages/sales/edit.js'),
       },
     ],

@@ -31,6 +31,7 @@ export interface ListResult<T> {
   meta: { total: number; page: number; pageSize: number };
 }
 export interface CustomerContext {
+  revision?: number;
   reload: () => void;
   customer?: Customer;
 }

@@ -6,6 +6,21 @@ const zhCN: AppResource = {
   // The template's own copy; see `./en-US.ts`.
   ...systemZhCN,
   ...fileUi,
+  workspace: {
+    title: '销售工作台',
+    description: '继续最近的沟通，推进客户商机。',
+    openCustomers: '查看客户',
+    customers: '客户',
+    opportunities: '商机',
+    quotes: '报价',
+    opportunity: '商机',
+    recentFollowUps: '最近跟进',
+    recentOpportunities: '最近更新的商机',
+    recentQuotes: '最近更新的报价',
+    noFollowUps: '暂无跟进记录，请打开客户记录沟通。',
+    noOpportunities: '暂无商机，请打开客户创建商机。',
+    noQuotes: '暂无报价，请打开商机创建报价。',
+  },
   sales: {
     name: '名称',
     products: '产品',

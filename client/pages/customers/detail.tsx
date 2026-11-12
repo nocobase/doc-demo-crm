@@ -1,37 +1,34 @@
-import { SalesRelated } from '../sales/lists.js';
-import { usePageBreadcrumb, resolveListState } from '@nocobase/app-client';
+import { usePageBreadcrumb } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useState } from 'react';
 import {
   Link,
+  Navigate,
   Outlet,
+  useLocation,
+  useNavigate,
   useParams,
   useOutletContext,
   useResolvedPath,
 } from 'react-router';
-import type { ColumnDef } from '@tanstack/react-table';
 import { PageContainer } from '#components/page-container';
 import { PageHeader } from '#components/page-header';
 import { RouteChildPage } from '#components/route-child-page';
 import { Button } from '#components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '#components/ui/card';
-import { DataTable } from '#components/data-table';
+import { Tabs, TabsList, TabsTrigger } from '#components/ui/tabs';
 import { Loading } from '#components/loading';
 import { useListData } from '#hooks/use-list-data';
 import { useRouteSearches } from '../../routing/route-context.js';
 import { ReadError } from './shared.js';
-import type {
-  Customer,
-  CustomerContext,
-  Contact,
-  FollowUp,
-  ListResult,
-} from './types.js';
+import type { Customer, CustomerContext } from './types.js';
 
 export default function CustomerDetail() {
   const { t } = useTranslation();
   const { customerId } = useParams();
   const parent = useResolvedPath('..').pathname;
+  const ownPath = useResolvedPath('.').pathname;
+  const location = useLocation();
+  const navigate = useNavigate();
   const searches = useRouteSearches();
   const owner = useOutletContext<CustomerContext>();
   const request = useListData<{ data: Customer }>(
@@ -51,6 +48,16 @@ export default function CustomerDetail() {
     owner.reload();
     setRevision((v) => v + 1);
   };
+  const tabs = [
+    { value: 'overview', label: t('crm.overview') },
+    { value: 'contacts', label: t('crm.contacts') },
+    { value: 'followUps', label: t('crm.followUps') },
+    { value: 'opportunities', label: t('sales.opportunities') },
+  ];
+  const segment = location.pathname.slice(ownPath.length + 1).split('/')[0];
+  const current = tabs.find((tab) => tab.value === segment)?.value;
+  const parentEntry =
+    location.pathname.replace(/\/$/, '') === ownPath.replace(/\/$/, '');
   return (
     <RouteChildPage>
       <PageContainer>
@@ -58,7 +65,17 @@ export default function CustomerDetail() {
           title={customer?.name ?? t('crm.detail')}
           actions={
             customer ? (
-              <Button nativeButton={false} render={<Link to='edit' />}>
+              <Button
+                nativeButton={false}
+                render={
+                  <Link
+                    to={{
+                      pathname: current ? `${current}/edit` : 'edit',
+                      search: location.search,
+                    }}
+                  />
+                }
+              >
                 {t('crm.editCustomer')}
               </Button>
             ) : undefined
@@ -70,142 +87,36 @@ export default function CustomerDetail() {
           <Loading />
         ) : (
           <>
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('crm.overview')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <dl className='grid gap-4 sm:grid-cols-2'>
-                  {[
-                    ['industry', customer.industry],
-                    ['status', t(`crm.${customer.status}`)],
-                    ['website', customer.website],
-                    ['notes', customer.notes],
-                  ].map(([key, value]) => (
-                    <div
-                      key={key}
-                      className={key === 'notes' ? 'sm:col-span-2' : ''}
-                    >
-                      <dt className='text-sm text-muted-foreground'>
-                        {t(`crm.${key}`)}
-                      </dt>
-                      <dd className='mt-1 whitespace-pre-wrap break-words'>
-                        {value || t('crm.notProvided')}
-                      </dd>
-                    </div>
+            {parentEntry ? (
+              <Navigate
+                replace
+                to={{ pathname: 'overview', search: location.search }}
+              />
+            ) : null}
+            <Tabs
+              value={current ?? 'overview'}
+              onValueChange={(value) => {
+                if (typeof value === 'string' && value !== current)
+                  void navigate({
+                    pathname: `${ownPath}/${value}`,
+                    search: location.search,
+                  });
+              }}
+            >
+              <div className='overflow-x-auto'>
+                <TabsList variant='line' aria-label={t('crm.detail')}>
+                  {tabs.map((tab) => (
+                    <TabsTrigger key={tab.value} value={tab.value}>
+                      {tab.label}
+                    </TabsTrigger>
                   ))}
-                </dl>
-              </CardContent>
-            </Card>
-            <SalesRelated customerId={customer.id} revision={revision} />
-            <Related
-              key={`contacts-${revision}`}
-              customerId={customer.id}
-              kind='contacts'
-            />
-            <Related
-              key={`followUps-${revision}`}
-              customerId={customer.id}
-              kind='followUps'
-            />
+                </TabsList>
+              </div>
+            </Tabs>
           </>
         )}
-        <Outlet context={{ customer, reload }} />
+        <Outlet context={{ customer, reload, revision }} />
       </PageContainer>
     </RouteChildPage>
-  );
-}
-function Related({
-  customerId,
-  kind,
-}: {
-  customerId: string;
-  kind: 'contacts' | 'followUps';
-}) {
-  const { t, i18n } = useTranslation();
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
-  const path = `crm/customers/${customerId}/${kind}?page=${pagination.pageIndex + 1}`;
-  const request = useListData<ListResult<Contact & FollowUp>>(path);
-  const state = resolveListState(
-    {
-      data: request.data,
-      error: request.error,
-      isPending: request.loading && !request.data,
-    },
-    request.data?.meta.total ?? 0,
-    false,
-  );
-  const columns: ColumnDef<Contact & FollowUp>[] =
-    kind === 'contacts'
-      ? [
-          { accessorKey: 'name', header: t('crm.contactName') },
-          { accessorKey: 'role', header: t('crm.role') },
-          { accessorKey: 'email', header: t('crm.email') },
-          { accessorKey: 'phone', header: t('crm.phone') },
-        ]
-      : [
-          {
-            accessorKey: 'createdAt',
-            header: t('crm.recordedAt'),
-            cell: ({ row }) =>
-              new Date(row.original.createdAt).toLocaleString(i18n.language),
-          },
-          {
-            accessorKey: 'channel',
-            header: t('crm.channel'),
-            cell: ({ row }) => t(`crm.${row.original.channel}`),
-          },
-          {
-            accessorKey: 'content',
-            header: t('crm.content'),
-            cell: ({ row }) => (
-              <p className='min-w-48 max-w-md whitespace-pre-wrap break-words'>
-                {row.original.content}
-              </p>
-            ),
-          },
-          {
-            accessorKey: 'nextStep',
-            header: t('crm.nextStep'),
-            cell: ({ row }) => (
-              <p className='min-w-40 max-w-xs whitespace-pre-wrap break-words'>
-                {row.original.nextStep || t('crm.notProvided')}
-              </p>
-            ),
-          },
-          { accessorKey: 'authorName', header: t('crm.author') },
-        ];
-  const action = (
-    <Button
-      variant='outline'
-      nativeButton={false}
-      render={<Link to={kind === 'contacts' ? 'newContact' : 'newFollowUp'} />}
-    >
-      {t(kind === 'contacts' ? 'crm.newContact' : 'crm.newFollowUp')}
-    </Button>
-  );
-  return (
-    <section className='space-y-3' aria-label={t(`crm.${kind}`)}>
-      <div className='flex flex-wrap items-center justify-between gap-2'>
-        <h2 className='text-lg font-semibold'>{t(`crm.${kind}`)}</h2>
-        {state === 'empty' ? null : action}
-      </div>
-      <DataTable
-        columns={columns}
-        data={request.data?.data ?? []}
-        getRowId={(row) => row.id}
-        manualPagination
-        rowCount={request.data?.meta.total ?? 0}
-        paginationState={pagination}
-        onPaginationChange={setPagination}
-        pageSizeOptions={[20]}
-        showSelectedCount={false}
-        listState={state}
-        loading={request.loading}
-        loadingIdentity={path}
-        onRetry={request.reload}
-        emptyAction={state === 'empty' ? action : undefined}
-      />
-    </section>
   );
 }

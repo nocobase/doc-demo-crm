@@ -7,6 +7,7 @@ import { Route, Routes } from 'react-router';
 import { expect, it } from 'vitest';
 import { renderSettingsClient } from '../helpers/settings-client.js';
 import CustomersPage from '../../client/pages/customers/index.js';
+import CustomerTab from '../../client/pages/customers/detail-tab.js';
 import CustomerDetail from '../../client/pages/customers/detail.js';
 import CrmEditor from '../../client/pages/customers/edit.js';
 import { RouteTreeProvider } from '../../client/routing/route-context.js';
@@ -40,6 +41,15 @@ function mount(
           <Route path='/customers' element={<CustomersPage />}>
             <Route path='new' element={<CrmEditor />} />
             <Route path=':customerId/details' element={<CustomerDetail />}>
+              {['overview', 'contacts', 'followUps', 'opportunities'].map(
+                (tab) => (
+                  <Route key={tab} path={tab} element={<CustomerTab />}>
+                    <Route path='edit' element={<CrmEditor />} />
+                    <Route path='newContact' element={<CrmEditor />} />
+                    <Route path='newFollowUp' element={<CrmEditor />} />
+                  </Route>
+                ),
+              )}
               <Route path='edit' element={<CrmEditor />} />
               <Route path='newContact' element={<CrmEditor />} />
               <Route path='newFollowUp' element={<CrmEditor />} />
@@ -163,13 +173,22 @@ it('opens the customer detail with related contacts and follow-ups', async () =>
     `/customers/${customer.id}/details`,
   );
   await screen.findByRole('heading', { name: 'Northstar Labs' });
+  await userEvent.click(
+    await screen.findByRole('tab', { name: 'Contacts', exact: true }),
+  );
   expect(await screen.findByText('Emma Wilson')).toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole('tab', { name: 'Follow-up records', exact: true }),
+  );
   expect(
     await screen.findByText('Reviewed CRM requirements.'),
   ).toBeInTheDocument();
   expect(
     screen.getByRole('button', { name: 'Record follow-up' }),
-  ).toHaveAttribute('href', `/customers/${customer.id}/details/newFollowUp`);
+  ).toHaveAttribute(
+    'href',
+    `/customers/${customer.id}/details/followUps/newFollowUp`,
+  );
 });
 
 it('keeps a failed form and its values available for retry', async () => {
@@ -216,4 +235,95 @@ it('uses Chinese copy for the same customer entry point', async () => {
   expect(
     await screen.findByRole('button', { name: '新建客户' }),
   ).toBeInTheDocument();
+});
+
+it('combines customer name and status filters and clears an empty result', async () => {
+  const queries: Record<string, unknown>[] = [];
+  await mount(
+    answerApi(({ query }) => {
+      queries.push(query ?? {});
+      return query?.q === 'Missing' ? list([]) : list();
+    }),
+  );
+  await screen.findByRole('link', { name: 'Northstar Labs' });
+  await userEvent.type(
+    screen.getByRole('textbox', { name: 'Search customers by name' }),
+    'North',
+  );
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Search', exact: true }),
+  );
+  await userEvent.click(screen.getByRole('combobox', { name: 'Status' }));
+  await userEvent.click(
+    await screen.findByRole('option', { name: 'Prospect', exact: true }),
+  );
+  await waitFor(() =>
+    expect(queries.at(-1)).toMatchObject({
+      q: 'North',
+      status: 'prospect',
+      page: '1',
+    }),
+  );
+  const input = screen.getByRole('textbox', {
+    name: 'Search customers by name',
+  });
+  await userEvent.clear(input);
+  await userEvent.type(input, 'Missing');
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Search', exact: true }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('link', { name: 'Northstar Labs' }),
+    ).not.toBeInTheDocument(),
+  );
+  await userEvent.click(screen.getByRole('button', { name: /Clear filters/i }));
+  expect(
+    await screen.findByRole('link', { name: 'Northstar Labs' }),
+  ).toBeInTheDocument();
+  expect(input).toHaveValue('');
+  expect(queries.at(-1)).not.toHaveProperty('status');
+});
+
+it('opens a contact form by URL and returns to its Contacts tab after saving', async () => {
+  let saved = false;
+  await mount(
+    answerApi(({ path, method }) => {
+      if (method === 'POST') {
+        saved = true;
+        return { data: { id: 'contact-new', name: 'Taylor Reed' } };
+      }
+      if (path === `crm/customers/${customer.id}`) return { data: customer };
+      if (path.endsWith('/contacts'))
+        return {
+          data: saved
+            ? [
+                {
+                  id: 'contact-new',
+                  name: 'Taylor Reed',
+                  role: '',
+                  email: '',
+                  phone: '',
+                },
+              ]
+            : [],
+          meta: { total: saved ? 1 : 0 },
+        };
+      return list();
+    }),
+    `/customers/${customer.id}/details/contacts/newContact`,
+  );
+  const dialog = await screen.findByRole('dialog');
+  await userEvent.type(
+    within(dialog).getByRole('textbox', { name: 'Contact name' }),
+    'Taylor Reed',
+  );
+  await userEvent.click(
+    within(dialog).getByRole('button', { name: 'Save', exact: true }),
+  );
+  expect(await screen.findByText('Taylor Reed')).toBeInTheDocument();
+  expect(
+    await screen.findByRole('tab', { name: 'Contacts', exact: true }),
+  ).toHaveAttribute('aria-selected', 'true');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

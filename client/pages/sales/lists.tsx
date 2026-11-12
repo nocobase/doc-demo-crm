@@ -3,6 +3,7 @@ import { useTranslation } from '@nocobase/i18n/client';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import type { ColumnDef } from '@tanstack/react-table';
+import { RecordLink } from '#components/record-link';
 import { DataTable } from '#components/data-table';
 import { Button } from '#components/ui/button';
 import { useListData } from '#hooks/use-list-data';
@@ -13,10 +14,12 @@ export function SalesRelated({
   customerId,
   opportunityId,
   revision = 0,
+  recordPath,
 }: {
   customerId: string;
   opportunityId?: string;
   revision?: number;
+  recordPath?: string;
 }) {
   const { t } = useTranslation();
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
@@ -38,12 +41,11 @@ export function SalesRelated({
       accessorKey: 'name',
       header: t('sales.name'),
       cell: ({ row }) => (
-        <Link
-          className='font-medium underline underline-offset-4'
-          to={`${kind}/${row.original.id}`}
+        <RecordLink
+          to={`${recordPath ?? kind}${(recordPath ?? kind) ? '/' : ''}${row.original.id}`}
         >
           {row.original.name}
-        </Link>
+        </RecordLink>
       ),
     },
     opportunityId

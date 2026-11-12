@@ -8,6 +8,22 @@ const enUS = {
   // `./system/` so a template upgrade can replace it without touching the application's copy below.
   ...systemEnUS,
   ...fileUi,
+  workspace: {
+    title: 'Sales workspace',
+    description:
+      'Continue recent conversations and move your opportunities forward.',
+    openCustomers: 'Open customers',
+    customers: 'Customers',
+    opportunities: 'Opportunities',
+    quotes: 'Quotes',
+    opportunity: 'Opportunity',
+    recentFollowUps: 'Recent follow-ups',
+    recentOpportunities: 'Recently updated opportunities',
+    recentQuotes: 'Recently updated quotes',
+    noFollowUps: 'No follow-ups yet. Open a customer to record a conversation.',
+    noOpportunities: 'No opportunities yet. Open a customer to create one.',
+    noQuotes: 'No quotes yet. Open an opportunity to create one.',
+  },
   sales: {
     name: 'Name',
     products: 'Products',

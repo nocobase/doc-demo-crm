@@ -52,3 +52,15 @@ The first-release prototype remains the reference for its original customer flow
 - The initial customer page permission protects every sales endpoint. This stage does not yet introduce salesperson ownership or manager-specific permissions. No role is granted automatically to all signed-in users.
 
 Acceptance includes exact fractional rounding, product repricing without quote changes, quote edits, association boundaries, rejected invalid values, receipt replay, rollback, preserved older records and metadata relation reads. Standard components come from `client/components/data-table`, `route-dialog`, `feedback-form`, `pending-button` and `ui/{button,input,textarea,label,select,card,alert,alert-dialog}`; application code composes them without introducing custom primitives.
+
+## Lesson 6 increment — Sales workspace
+
+Keep the existing theme, shell, record URLs and quote rules. Compose routine pages with the installed UI Library (quick frontend workflow); do not change schema in this lesson.
+
+- `/sales` shows accurate customer, opportunity and quote counts, the five latest follow-ups, and the five most recently updated opportunities and quotes. Links retain record identity. Reads require the existing customer page permission; record ownership is introduced in Lesson 7.
+- Customer details use URL-backed Overview, Contacts, Follow-up records and Opportunities tabs. A bare detail URL redirects to Overview. Existing opportunity/quote URLs and legacy form URLs remain valid. Each tab owns its edit dialog so closing or saving returns to that tab, including after a direct URL load.
+- Customer list search/status/pagination remain URL-backed. Returning restores the original list filters. Tab content reuses DataTable, existing forms and submission protection; the parent owns PageContainer/PageHeader and shell breadcrumbs.
+- Empty, loading and failed reads have standard feedback. Retrying reads never repeats writes. Tables can scroll horizontally on small screens while navigation and form actions remain reachable.
+- The original prototype is the first-release reference; this section supersedes its vertically stacked detail sections with route tabs and adds the workspace. There is no new visual theme or shell exception.
+
+Acceptance: combined search/status filters, empty results, failure/retry, direct tab URLs and reload, save/cancel to the same tab, browser back, workspace links and current counts, retained older records, and narrow-screen return paths.
