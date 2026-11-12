@@ -278,3 +278,74 @@ test('rejects invalid input, spoofed follow-up authors and malformed paging', as
     ).toBe(400);
   expect((await admin.fetch('/crm/customers/not-a-uuid')).status).toBe(400);
 });
+
+test('paginates the complete dataset and keeps literal search characters safe', async ({
+  testApp,
+}) => {
+  const admin = await signIn(testApp, DEFAULT_ADMIN_CREDENTIALS);
+  for (let index = 0; index < 23; index++) {
+    const response = await admin.fetch(
+      '/crm/customers',
+      write({ name: `Paging account ${String(index).padStart(2, '0')}` }),
+    );
+    expect(response.status).toBe(200);
+  }
+  const first = await (
+    await admin.fetch('/crm/customers?q=Paging%20account&page=1&pageSize=20')
+  ).json();
+  const second = await (
+    await admin.fetch('/crm/customers?q=Paging%20account&page=2&pageSize=20')
+  ).json();
+  expect(first.meta.total).toBe(23);
+  expect(first.data).toHaveLength(20);
+  expect(second.data).toHaveLength(3);
+  expect(
+    new Set(
+      [...first.data, ...second.data].map((item: { id: string }) => item.id),
+    ).size,
+  ).toBe(23);
+  expect(first.data[0].name).toBe('Paging account 00');
+  expect(second.data[2].name).toBe('Paging account 22');
+  expect((await admin.fetch('/crm/customers?q=%27%20OR%201%3D1')).status).toBe(
+    200,
+  );
+});
+
+test('rolls back failed mutations and requires operation keys', async ({
+  testApp,
+  connection,
+}) => {
+  const admin = await signIn(testApp, DEFAULT_ADMIN_CREDENTIALS);
+  const id = randomUUID();
+  const operation = key();
+  const followUp = {
+    channel: 'call',
+    content: 'Failed parent must not create a child.',
+  };
+  const before = await connection.repository('mutationReceipts').count();
+  expect(
+    (
+      await admin.fetch(
+        `/crm/customers/${id}/followUps`,
+        write(followUp, 'POST', operation),
+      )
+    ).status,
+  ).toBe(404);
+  expect(await connection.repository('mutationReceipts').count()).toBe(before);
+  expect(
+    await connection
+      .repository('crmFollowUps')
+      .count({ filter: { customerId: id } }),
+  ).toBe(0);
+  const request = write({ name: 'Missing operation key' });
+  const headers = new Headers(request.headers);
+  headers.delete('Idempotency-Key');
+  expect(
+    (await admin.fetch('/crm/customers', { ...request, headers })).status,
+  ).toBe(400);
+  expect(
+    await connection
+      .repository('crmCustomers')
+      .count({ filter: { name: 'Missing operation key' } }),
+  ).toBe(0);
+});

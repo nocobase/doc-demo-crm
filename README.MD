@@ -1,16 +1,37 @@
 # Tutorial CRM
 
-A cumulative NocoBase 3 CRM tutorial. This stage implements customer management, contacts and follow-ups from the first-release design. The interface and sample data use English.
+A cumulative NocoBase 3 CRM for the first four quick-start lessons. The interface
+and sample business data default to English. Use Customers to manage customer
+details, contacts and follow-up records.
 
-| Stage      | Outcome                                      | Guide                        |
-| ---------- | -------------------------------------------- | ---------------------------- |
-| `lesson-1` | Create and run the application               | [Lesson 1](docs/lesson-1.md) |
-| `lesson-2` | Define requirements and review the prototype | [Lesson 2](docs/lesson-2.md) |
-| `lesson-3` | Manage customers, contacts and follow-ups    | [Lesson 3](docs/lesson-3.md) |
+| Stage      | Outcome                                             | Guide                        |
+| ---------- | --------------------------------------------------- | ---------------------------- |
+| `lesson-1` | Create, configure and run the application           | [Lesson 1](docs/lesson-1.md) |
+| `lesson-2` | Requirements and interactive prototype              | [Lesson 2](docs/lesson-2.md) |
+| `lesson-3` | Customers, contacts and follow-up records           | [Lesson 3](docs/lesson-3.md) |
+| `lesson-4` | Automated tests, build, local delivery and recovery | [Lesson 4](docs/lesson-4.md) |
 
-Open [the prototype](docs/prototype.html) directly in a browser and read [the design](docs/design.md). Preview records are held in memory only. To run the actual application, follow [Lesson 1](docs/lesson-1.md); then follow [Lesson 3](docs/lesson-3.md) for migrations, optional sample data and business acceptance. Preserve configuration, database and storage when upgrading.
+```sh
+pnpm install --frozen-lockfile
+pnpm nocobase config init --dialect sqlite --json
+pnpm nocobase config check --json
+pnpm dev
+```
 
-The framework reference below is retained for application maintenance.
+Open the exact `Local:` URL. Sign in with the local learning account `nocobase`
+(password `admin123`), then open **Customers**. Change the sample password before
+exposing the application. After initial startup, `pnpm nocobase db sample --json`
+loads three optional sample customers. `pnpm test` runs the Vitest suite.
+
+Check out a stage with `git switch -c my-crm lesson-3`; compare stages with
+`git diff lesson-2..lesson-3`. Git changes code only: preserve or separately
+restore configuration, database and storage. [Verification](docs/verification.md)
+records the tested runtime and delivery boundaries.
+
+Read [the design](docs/design.md) and [the first-release prototype](docs/prototype.html) before changing business behavior. The prototype simulates interactions; use the running application to verify persistence and authorization.
+
+The framework reference below is retained for application maintenance. Follow
+[AGENTS.md](AGENTS.md) and the synchronized application skills for development.
 
 ---
 
