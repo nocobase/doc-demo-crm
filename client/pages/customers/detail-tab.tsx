@@ -1,3 +1,4 @@
+import CustomerMail from '../mail/customer.js';
 import { CustomerAttachments } from '../documents/files.js';
 import { resolveListState } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
@@ -63,6 +64,12 @@ export default function CustomerTab() {
             reload={context.reload}
           />
         </>
+      ) : tab === 'mail' ? (
+        <CustomerMail
+          key={customer.id}
+          customerId={customer.id}
+          revision={revision}
+        />
       ) : tab === 'attachments' ? (
         <CustomerAttachments customerId={customer.id} revision={revision} />
       ) : tab === 'opportunities' ? (

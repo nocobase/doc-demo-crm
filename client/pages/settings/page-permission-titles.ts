@@ -5,6 +5,8 @@ import type { PagePermissionTitles } from './page-permissions.js';
  * Do not add navigation/breadcrumbs or change authorization ids just to name a permission.
  */
 export const pagePermissionTitles: PagePermissionTitles = {
+  'customers-tab-mail': 'crmMail.title',
+  'customers-tab-mail-edit': 'crm.editCustomer',
   'customers-tab-attachments': 'documents.attachments',
   'customers-tab-attachments-edit': 'crm.editCustomer',
   'customers-tab-attachments-add': 'documents.add',

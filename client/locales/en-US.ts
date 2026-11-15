@@ -14,6 +14,30 @@ const enUS = {
   ...notificationLogsUi,
   ...approvalUi,
   approval: approvalLocaleEnUS.approval,
+  crmMail: {
+    title: 'Customer mail',
+    workspace: 'Mail',
+    accounts: 'Mail accounts',
+    admin: 'Mail administration',
+    logs: 'Mail logs',
+    account: 'Account',
+    subject: 'Subject',
+    status: 'Status',
+    createdAt: 'Date',
+    refresh: 'Refresh',
+    syncRuns: 'Synchronization',
+    submissions: 'Submissions',
+    from: 'From',
+    preview: 'Preview',
+    previous: 'Previous contacts',
+    next: 'More contacts',
+    scope:
+      'Only your synchronized mail matching this contact is shown. Open Mail to read or send messages.',
+    chooseContact:
+      'Choose a contact with an email address. Add one under Contacts if none is available.',
+    outcome:
+      'Accepted means the provider accepted the message, not recipient delivery. Check unknown results before sending again.',
+  },
   crmNotifications: {
     logs: 'Delivery logs',
     events: 'Business events',

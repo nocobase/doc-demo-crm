@@ -1,3 +1,4 @@
+import { Mail } from 'lucide-react';
 import crmNotificationRoutes from './pages/settings/crm-notifications/routes.js';
 import databaseExplorerRoutes from './pages/settings/database-explorer/routes.js';
 import { createAppClientConfig } from '@nocobase/app-client';
@@ -21,6 +22,58 @@ import {
 
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
   {
+    // Every signed-in user reaches the landing page. `authz: 'skip'` takes it out of page authorization entirely, so
+    // no permission change can leave a user signed in with nowhere to land.
+    authz: 'skip',
+    auth: 'required',
+    componentLoader: () => import('./pages/home/index.js'),
+    name: 'home',
+    navigation: { title: 'navigation.home', icon: Home },
+    path: '/',
+  },
+  {
+    name: 'crm-mail',
+    path: '/mail',
+    auth: 'required',
+    authz: {
+      resource: { type: 'page', id: 'mail.workspace' },
+      action: 'access',
+    },
+    navigation: { title: 'crmMail.workspace', icon: Mail },
+    componentLoader: () => import('./pages/mail/workspace.js'),
+  },
+  {
+    name: 'crm-mail-accounts',
+    path: '/mail/accounts',
+    auth: 'required',
+    authz: {
+      resource: { type: 'page', id: 'mail.workspace' },
+      action: 'access',
+    },
+    breadcrumb: { title: 'crmMail.accounts' },
+    componentLoader: () => import('./pages/mail/accounts.js'),
+  },
+  {
+    name: 'crm-mail-logs',
+    path: '/mail/logs',
+    auth: 'required',
+    authz: {
+      resource: { type: 'page', id: 'mail.workspace' },
+      action: 'access',
+    },
+    breadcrumb: { title: 'crmMail.logs' },
+    componentLoader: () => import('./pages/mail/logs.js'),
+  },
+  {
+    name: 'crm-mail-admin',
+    parent: 'settingsBusiness',
+    path: '/mail-administration',
+    auth: 'required',
+    authz: { resource: { type: 'page', id: 'mail.admin' }, action: 'access' },
+    navigation: { title: 'crmMail.admin', icon: Mail },
+    componentLoader: () => import('./pages/mail/logs.js'),
+  },
+  {
     parent: 'settingsBusiness',
     name: 'crm.documents',
     path: '/documents',
@@ -33,16 +86,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     componentLoader: () => import('./pages/settings/documents/index.js'),
   },
   // Keep Home first; add business navigation after this landing page.
-  {
-    // Every signed-in user reaches the landing page. `authz: 'skip'` takes it out of page authorization entirely, so
-    // no permission change can leave a user signed in with nowhere to land.
-    authz: 'skip',
-    auth: 'required',
-    componentLoader: () => import('./pages/home/index.js'),
-    name: 'home',
-    navigation: { title: 'navigation.home', icon: Home },
-    path: '/',
-  },
   {
     name: 'crm-tasks',
     path: '/tasks',
@@ -152,6 +195,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
               'followUps',
               'opportunities',
               'attachments',
+              'mail',
             ] as const
           ).map((tab): AppClientRouteDefinition => ({
             name: `customers-tab-${tab}`,

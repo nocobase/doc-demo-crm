@@ -193,6 +193,10 @@ describe('app client routes', () => {
     // The landing page and the inbox opted out of page authorization, so they are reachable by every signed-in user.
     expect(pageAuthorizations(resolved.routes)).toEqual([
       { name: 'home', authorizedAs: null },
+      ...['crm-mail', 'crm-mail-accounts', 'crm-mail-logs'].map((name) => ({
+        name,
+        authorizedAs: 'mail.workspace',
+      })),
       ...[
         'crm-tasks',
         'crm-task-quote',
@@ -222,6 +226,8 @@ describe('app client routes', () => {
         'customers-tab-attachments',
         'customers-tab-attachments-edit',
         'customers-tab-attachments-add',
+        'customers-tab-mail',
+        'customers-tab-mail-edit',
         'sales-opportunity-new',
         'customers-edit',
         'customers-contact-new',
@@ -256,6 +262,7 @@ describe('app client routes', () => {
         name,
         authorizedAs: 'settings:authorization.default-access',
       })),
+      { name: 'crm-mail-admin', authorizedAs: 'mail.admin' },
       { name: 'crm.documents', authorizedAs: 'crm.documents' },
       ...[
         'quoteWorkflows',
@@ -264,9 +271,9 @@ describe('app client routes', () => {
         'quoteWorkflowExecutions',
         'quoteWorkflowExecution',
       ].map((name) => ({ name, authorizedAs: 'composite:crm.workflow' })),
-      {name:'notificationLogs',authorizedAs:'notification.logs'},
-      {name:'crmNotificationEvents',authorizedAs:'notification.logs'},
-      {name:'notificationTemplates',authorizedAs:'notification.templates'},
+      { name: 'notificationLogs', authorizedAs: 'notification.logs' },
+      { name: 'crmNotificationEvents', authorizedAs: 'notification.logs' },
+      { name: 'notificationTemplates', authorizedAs: 'notification.templates' },
       { name: 'databaseExplorer', authorizedAs: 'database-explorer' },
     ]);
   });
