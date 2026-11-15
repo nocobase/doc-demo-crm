@@ -360,7 +360,7 @@ test('delivers committed customer and approval events once to their intended inb
   const templates = await data(await admin.fetch('/notifications/templates'));
   expect(
     templates.filter((value: { id: string }) => value.id.startsWith('crm.')),
-  ).toHaveLength(4);
+  ).toHaveLength(6);
   const preview = await admin.fetch(
     '/notifications/templates/crm.confirmed/preview',
     write({ locale: 'zh-CN' }),

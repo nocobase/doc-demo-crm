@@ -19,6 +19,8 @@ import {
 import type { ScheduleExecutor } from '@nocobase/jobs';
 import { z } from 'zod';
 export const scenarios = [
+  'followUpDue',
+  'quoteDue',
   'assignment',
   'confirmed',
   'rejected',
@@ -26,6 +28,14 @@ export const scenarios = [
 ] as const;
 export type CrmNotificationScenario = (typeof scenarios)[number];
 export function renderCrmNotification(scenario: CrmNotificationScenario) {
+  if (scenario === 'followUpDue' || scenario === 'quoteDue')
+    return {
+      title:
+        scenario === 'followUpDue'
+          ? 'Customer follow-up due'
+          : 'Quotation response due',
+      body: 'A customer plan is due. Open the customer to review the current details. Reading this message does not complete the plan.',
+    };
   if (scenario === 'assignment')
     return {
       title: 'Customer assigned to you',
@@ -195,14 +205,16 @@ export default class CrmNotificationsProvider extends ServiceProvider<Applicatio
           contributor: 'doc-demo-crm',
           category: 'CRM',
           name: renderCrmNotification(scenario).title,
-          trigger:
-            scenario === 'assignment'
+          trigger: ['assignment', 'followUpDue', 'quoteDue'].includes(scenario)
+            ? scenario === 'assignment'
               ? 'Customer owner changes to another nonnull user'
-              : `Quotation transitions to ${scenario === 'returned' ? 'revision' : scenario}`,
-          recipients:
-            scenario === 'assignment'
-              ? 'New customer owner, including self-assignment'
-              : 'Original quotation applicant',
+              : 'An active customer plan becomes due'
+            : `Quotation transitions to ${scenario === 'returned' ? 'revision' : scenario}`,
+          recipients: ['assignment', 'followUpDue', 'quoteDue'].includes(
+            scenario,
+          )
+            ? 'Current customer owner at event creation'
+            : 'Original quotation applicant',
           businessRule:
             'Every committed event; no unrelated or read-only shared recipients',
           locales: ['en-US'],

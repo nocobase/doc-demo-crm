@@ -1,3 +1,4 @@
+import CustomerReminders from '../reminders/customer.js';
 import CustomerMail from '../mail/customer.js';
 import { CustomerAttachments } from '../documents/files.js';
 import { resolveListState } from '@nocobase/app-client';
@@ -64,6 +65,12 @@ export default function CustomerTab() {
             reload={context.reload}
           />
         </>
+      ) : tab === 'reminders' ? (
+        <CustomerReminders
+          key={customer.id}
+          customerId={customer.id}
+          revision={revision}
+        />
       ) : tab === 'mail' ? (
         <CustomerMail
           key={customer.id}

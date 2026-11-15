@@ -228,6 +228,8 @@ describe('app client routes', () => {
         'customers-tab-attachments-add',
         'customers-tab-mail',
         'customers-tab-mail-edit',
+        'customers-tab-reminders',
+        'customers-tab-reminders-edit',
         'sales-opportunity-new',
         'customers-edit',
         'customers-contact-new',
@@ -262,6 +264,7 @@ describe('app client routes', () => {
         name,
         authorizedAs: 'settings:authorization.default-access',
       })),
+      { name: 'crm-schedules', authorizedAs: 'scheduler.schedules' },
       { name: 'crm-mail-admin', authorizedAs: 'mail.admin' },
       { name: 'crm.documents', authorizedAs: 'crm.documents' },
       ...[

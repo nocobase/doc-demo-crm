@@ -56,6 +56,7 @@ export default function CustomerDetail() {
     { value: 'contacts', label: t('crm.contacts') },
     { value: 'followUps', label: t('crm.followUps') },
     { value: 'opportunities', label: t('sales.opportunities') },
+    { value: 'reminders', label: t('reminders.title') },
     { value: 'mail', label: t('crmMail.title') },
     { value: 'attachments', label: t('documents.attachments') },
   ];

@@ -65,6 +65,18 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     componentLoader: () => import('./pages/mail/logs.js'),
   },
   {
+    name: 'crm-schedules',
+    parent: 'settingsBusiness',
+    path: '/crm-schedules',
+    auth: 'required',
+    authz: {
+      resource: { type: 'page', id: 'scheduler.schedules' },
+      action: 'access',
+    },
+    navigation: { title: 'reminders.schedules', icon: Workflow },
+    componentLoader: () => import('./pages/reminders/schedules.js'),
+  },
+  {
     name: 'crm-mail-admin',
     parent: 'settingsBusiness',
     path: '/mail-administration',
@@ -196,6 +208,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
               'opportunities',
               'attachments',
               'mail',
+              'reminders',
             ] as const
           ).map((tab): AppClientRouteDefinition => ({
             name: `customers-tab-${tab}`,
