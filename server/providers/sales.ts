@@ -1,3 +1,4 @@
+import { lockQuote, assertQuoteEditable } from './quote-lock.js';
 import { scopedRepository, type CrmPolicies } from './crm-permissions.js';
 import { randomUUID } from 'node:crypto';
 import {
@@ -266,6 +267,10 @@ export class SalesService {
     const existing = id
       ? await this.quote(customerId, opportunityId, id)
       : undefined;
+    if (id) {
+      await lockQuote(this.connection, id);
+      await assertQuoteEditable(this.connection, id);
+    }
     const quoteId = id ?? randomUUID();
     const lines = [];
     for (const [position, line] of input.lines.entries()) {

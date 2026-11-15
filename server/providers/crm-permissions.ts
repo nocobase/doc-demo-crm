@@ -222,6 +222,25 @@ export default class CrmPermissionsProvider extends ServiceProvider<AppPluginApp
     authz.ui.place(authz.compositeResources.define(crmRecords), {
       section: 'crm',
     });
+    authz.ui.place(
+      authz.compositeResources.define(
+        defineCompositeResource('crm.workflow', (r) =>
+          r
+            .title({ key: 'quoteApproval.workflows', ns: 'app' })
+            .action('read', (a) =>
+              a
+                .title({ key: 'crmAccess.view', ns: 'app' })
+                .grant('applications', data('crmQuoteApprovals')),
+            )
+            .action('configure', (a) =>
+              a
+                .title({ key: 'quoteApproval.configure', ns: 'app' })
+                .grant('applications', data('crmQuoteApprovals')),
+            ),
+        ),
+      ),
+      { section: 'crm' },
+    );
     authz.ui.place(authz.compositeResources.define(crmProducts), {
       section: 'crm',
     });

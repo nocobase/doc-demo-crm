@@ -5,6 +5,15 @@ import type { PagePermissionTitles } from './page-permissions.js';
  * Do not add navigation/breadcrumbs or change authorization ids just to name a permission.
  */
 export const pagePermissionTitles: PagePermissionTitles = {
+  'sales-quote-submit': 'quoteApproval.submit',
+  'crm-task-quote-edit': 'sales.editQuote',
+  'crm-task-quote-submit': 'quoteApproval.submit',
+  'crm-task-quote': 'quoteApproval.title',
+  quoteWorkflowDefinitions: 'quoteApproval.definitions',
+  quoteWorkflowDefinition: 'quoteApproval.title',
+  quoteWorkflowExecutions: 'quoteApproval.executions',
+  quoteWorkflowExecution: 'quoteApproval.executions',
+
   'customers-tab-overview': 'crm.overview',
   'customers-tab-contacts': 'crm.contacts',
   'customers-tab-followUps': 'crm.followUps',

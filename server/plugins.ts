@@ -19,6 +19,8 @@ import {
 import scheduler from '@nocobase/app-plugin-scheduler/server';
 import file from '@nocobase/app-plugin-file/server';
 import mail from '@nocobase/app-plugin-mail/server';
+import taskCenter from '@nocobase/app-plugin-task-center/server';
+import approval from '@nocobase/app-plugin-approval/server';
 
 const serverPlugins: AppServerPlugins = defineServerPlugins([
   concurrency,
@@ -38,6 +40,8 @@ const serverPlugins: AppServerPlugins = defineServerPlugins([
   scheduler,
   mail,
   foundation,
+  taskCenter,
+  approval,
 ]);
 
 export default serverPlugins;

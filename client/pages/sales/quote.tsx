@@ -1,3 +1,5 @@
+import { approvalPath } from './approval-path.js';
+import QuoteApprovalPanel, { type ApprovalView } from './approval.js';
 import { usePageBreadcrumb } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { Link, Outlet, useParams, useOutletContext } from 'react-router';
@@ -22,7 +24,10 @@ export default function QuoteDetail() {
   const { t } = useTranslation();
   const { customerId, opportunityId, quoteId } = useParams();
   const access = useCustomerOperation(customerId, 'editQuote');
-  const owner = useOutletContext<SalesContext>();
+  const owner = useOutletContext<SalesContext & { fromTasks?: boolean }>();
+  const approval = useListData<{ data: ApprovalView }>(
+    approvalPath(customerId, opportunityId, quoteId),
+  );
   const opportunityPath = `/customers/${customerId}/details/opportunities/${opportunityId}`;
   const request = useListData<{ data: Quote }>(
     `crmSales/customers/${customerId}/opportunities/${opportunityId}/quotes/${quoteId}`,
@@ -30,17 +35,25 @@ export default function QuoteDetail() {
   const quote = request.error ? undefined : request.data?.data;
   const reload = () => {
     request.reload();
-    owner.reload();
+    owner?.reload();
+    approval.reload();
   };
-  usePageBreadcrumb([
-    { label: t('crm.title'), to: '/customers' },
-    { label: t('crm.detail'), to: `/customers/${customerId}/details` },
-    {
-      label: owner.opportunity?.name ?? t('sales.opportunities'),
-      to: opportunityPath,
-    },
-    { label: quote?.name ?? t('sales.quotes') },
-  ]);
+  usePageBreadcrumb(
+    owner?.fromTasks
+      ? [
+          { label: t('quoteApproval.tasks'), to: '/tasks' },
+          { label: quote?.name ?? t('sales.quotes') },
+        ]
+      : [
+          { label: t('crm.title'), to: '/customers' },
+          { label: t('crm.detail'), to: `/customers/${customerId}/details` },
+          {
+            label: owner?.opportunity?.name ?? t('sales.opportunities'),
+            to: opportunityPath,
+          },
+          { label: quote?.name ?? t('sales.quotes') },
+        ],
+  );
   const columns: ColumnDef<QuoteLine>[] = [
     { accessorKey: 'productName', header: t('sales.product') },
     { accessorKey: 'productCode', header: t('sales.code') },
@@ -68,7 +81,10 @@ export default function QuoteDetail() {
           title={quote?.name ?? t('sales.quotes')}
           description={t('sales.snapshotHint')}
           actions={
-            quote && access.allowed ? (
+            quote &&
+            access.allowed &&
+            approval.data &&
+            ['draft', 'revision'].includes(approval.data.data.status) ? (
               <Button nativeButton={false} render={<Link to='edit' />}>
                 {t('sales.editQuote')}
               </Button>
@@ -94,6 +110,9 @@ export default function QuoteDetail() {
             </Card>
           </>
         )}
+        {quote ? (
+          <QuoteApprovalPanel revision={approval.revision} onHandled={reload} />
+        ) : null}
         <Outlet context={{ quote, reload }} />
       </PageContainer>
     </RouteChildPage>

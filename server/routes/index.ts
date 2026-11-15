@@ -1,3 +1,5 @@
+import quoteWorkflowRoutes from './quote-workflows.js';
+import quoteApprovalRoutes from './quote-approvals.js';
 import crmAccessRoutes from './crm-access.js';
 import workspaceRoutes from './workspace.js';
 import salesRoutes from './sales.js';
@@ -10,6 +12,8 @@ const routes: readonly AppRouteContribution<Application>[] = [
   crmAccessRoutes,
   crmRoutes,
   salesRoutes,
+  quoteApprovalRoutes,
+  quoteWorkflowRoutes,
 ];
 
 export default routes;

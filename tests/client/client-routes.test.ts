@@ -194,6 +194,10 @@ describe('app client routes', () => {
     expect(pageAuthorizations(resolved.routes)).toEqual([
       { name: 'home', authorizedAs: null },
       ...[
+        'crm-tasks',
+        'crm-task-quote',
+        'crm-task-quote-edit',
+        'crm-task-quote-submit',
         'sales-workspace',
         'customers',
         'customers-new',
@@ -213,6 +217,7 @@ describe('app client routes', () => {
         'sales-opportunity-edit',
         'sales-quote-new',
         'sales-quote',
+        'sales-quote-submit',
         'sales-quote-edit',
         'sales-opportunity-new',
         'customers-edit',
@@ -248,6 +253,7 @@ describe('app client routes', () => {
         name,
         authorizedAs: 'settings:authorization.default-access',
       })),
+      ...['quoteWorkflows','quoteWorkflowDefinitions','quoteWorkflowDefinition','quoteWorkflowExecutions','quoteWorkflowExecution'].map(name=>({name,authorizedAs:'composite:crm.workflow'})),
       { name: 'databaseExplorer', authorizedAs: 'database-explorer' },
     ]);
   });

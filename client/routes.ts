@@ -3,7 +3,14 @@ import { createAppClientConfig } from '@nocobase/app-client';
 import { readAppClientRuntimeConfig } from '@nocobase/app-client/runtime';
 import { includeNotificationTemplateRoutes } from './pages/settings/notification-routes.js';
 import systemSettingsRoutes from './pages/settings/routes.js';
-import { Home, Building2, Package, LayoutDashboard } from 'lucide-react';
+import {
+  Home,
+  Building2,
+  Package,
+  LayoutDashboard,
+  ListTodo,
+  Workflow,
+} from 'lucide-react';
 import settingsShellRoutes from './pages/settings/shell-routes.js';
 import {
   defineAppRoutes,
@@ -22,6 +29,80 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'home',
     navigation: { title: 'navigation.home', icon: Home },
     path: '/',
+  },
+  {
+    name: 'crm-tasks',
+    path: '/tasks',
+    auth: 'required',
+    authz: { resource: { type: 'page', id: 'customers' }, action: 'access' },
+    navigation: { title: 'quoteApproval.tasks', icon: ListTodo },
+    componentLoader: () => import('./pages/tasks/index.js'),
+    children: [
+      {
+        name: 'crm-task-quote',
+        path: 'quotes/:customerId/:opportunityId/:quoteId',
+        componentLoader: () => import('./pages/sales/quote.js'),
+        children: [
+          {
+            name: 'crm-task-quote-edit',
+            path: 'edit',
+            presentation: { kind: 'dialog' as const, title: 'sales.editQuote' },
+            componentLoader: () => import('./pages/sales/edit.js'),
+          },
+          {
+            name: 'crm-task-quote-submit',
+            path: 'submit',
+            presentation: {
+              kind: 'dialog' as const,
+              title: 'quoteApproval.submit',
+            },
+            componentLoader: () => import('./pages/sales/submit-quote.js'),
+          },
+        ],
+      },
+    ],
+  },
+  {
+    parent: 'settingsBusiness',
+    name: 'quoteWorkflows',
+    path: '/quote-workflows',
+    auth: 'required',
+    authz: {
+      resource: { type: 'composite', id: 'crm.workflow' },
+      action: 'read',
+    },
+    navigation: { title: 'quoteApproval.workflows', icon: Workflow },
+    componentLoader: () => import('./pages/settings/quote-workflows/index.js'),
+    children: [
+      {
+        name: 'quoteWorkflowDefinitions',
+        path: 'definitions',
+        componentLoader: () =>
+          import('./pages/settings/quote-workflows/definitions.js'),
+        children: [
+          {
+            name: 'quoteWorkflowDefinition',
+            path: 'quotation',
+            componentLoader: () =>
+              import('./pages/settings/quote-workflows/definition.js'),
+          },
+        ],
+      },
+      {
+        name: 'quoteWorkflowExecutions',
+        path: 'executions',
+        componentLoader: () =>
+          import('./pages/settings/quote-workflows/executions.js'),
+        children: [
+          {
+            name: 'quoteWorkflowExecution',
+            path: ':executionId',
+            componentLoader: () =>
+              import('./pages/settings/quote-workflows/execution.js'),
+          },
+        ],
+      },
+    ],
   },
   {
     name: 'sales-workspace',
@@ -140,6 +221,16 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
                           componentLoader: () =>
                             import('./pages/sales/quote.js'),
                           children: [
+                            {
+                              name: 'sales-quote-submit',
+                              path: 'submit',
+                              presentation: {
+                                kind: 'dialog' as const,
+                                title: 'quoteApproval.submit',
+                              },
+                              componentLoader: () =>
+                                import('./pages/sales/submit-quote.js'),
+                            },
                             {
                               name: 'sales-quote-edit',
                               path: 'edit',
