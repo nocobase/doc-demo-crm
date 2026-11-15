@@ -1,3 +1,4 @@
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/en-US.js';
 import { approvalLocaleEnUS } from '@nocobase/app-plugin-approval/client';
 import approvalUi from '../extensions/nocobase-approval-ui/locales/en-US.js';
 import fileUi from '../extensions/nocobase-file-component-ui/locales/en-US.js';
@@ -10,8 +11,36 @@ const enUS = {
   // `./system/` so a template upgrade can replace it without touching the application's copy below.
   ...systemEnUS,
   ...fileUi,
+  ...notificationLogsUi,
   ...approvalUi,
   approval: approvalLocaleEnUS.approval,
+  crmNotifications: {
+    logs: 'Delivery logs',
+    events: 'Business events',
+    readFailed:
+      'Unable to read delivery records. Check your access and try again.',
+    latest: 'Latest records',
+    older: 'Older records',
+    scenario: 'Scenario',
+    status: 'Handoff state',
+    time: 'Event time',
+    attempts: 'Submission attempts',
+    issue: 'Issue',
+    openLog: 'View delivery',
+    refresh: 'Refresh',
+    all: 'All states',
+    queued: 'Awaiting submission',
+    submitted: 'Submitted to notifications',
+    skipped: 'Recipient unavailable',
+    assignment: 'Customer assigned',
+    confirmed: 'Quotation confirmed',
+    rejected: 'Quotation rejected',
+    returned: 'Quotation returned',
+    submissionUnavailable: 'Submission unavailable; queued for retry',
+    recipientUnavailable: 'Account removed or disabled',
+    handoffHint:
+      'Submitted means the notification service accepted the event. Open its delivery log to check the actual outcome. Queued events are retried every 15 seconds.',
+  },
   documents: {
     status: 'Status',
     all: 'All states',

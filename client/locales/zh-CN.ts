@@ -1,3 +1,4 @@
+import notificationLogsUi from '../extensions/nocobase-notification-logs-ui/locales/zh-CN.js';
 import { approvalLocaleZhCN } from '@nocobase/app-plugin-approval/client';
 import approvalUi from '../extensions/nocobase-approval-ui/locales/zh-CN.js';
 import fileUi from '../extensions/nocobase-file-component-ui/locales/zh-CN.js';
@@ -8,8 +9,35 @@ const zhCN: AppResource = {
   // The template's own copy; see `./en-US.ts`.
   ...systemZhCN,
   ...fileUi,
+  ...notificationLogsUi,
   ...approvalUi,
   approval: approvalLocaleZhCN.approval,
+  crmNotifications: {
+    logs: '投递记录',
+    events: '业务事件',
+    readFailed: '无法读取投递记录，请检查访问权限后重试。',
+    latest: '最新记录',
+    older: '更早记录',
+    scenario: '通知场景',
+    status: '提交状态',
+    time: '事件时间',
+    attempts: '提交次数',
+    issue: '问题',
+    openLog: '查看投递',
+    refresh: '刷新',
+    all: '全部状态',
+    queued: '等待提交',
+    submitted: '已交给通知服务',
+    skipped: '接收人不可用',
+    assignment: '客户分配',
+    confirmed: '报价确认',
+    rejected: '报价拒绝',
+    returned: '报价退回',
+    submissionUnavailable: '提交暂不可用，等待重试',
+    recipientUnavailable: '账号已移除或停用',
+    handoffHint:
+      '已提交表示通知服务已接收事件，实际结果请查看投递记录。等待提交的事件每 15 秒重试。',
+  },
   documents: {
     status: '状态',
     all: '全部状态',

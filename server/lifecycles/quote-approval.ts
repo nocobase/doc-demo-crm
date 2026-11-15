@@ -1,3 +1,8 @@
+import {
+  enqueueCrmNotification,
+  eventIdentity,
+} from '../providers/crm-notifications.js';
+import type { DatabaseConnection } from '@nocobase/db';
 import { z } from 'zod';
 import type { ParameterGroup } from '@nocobase/lifecycle';
 import {
@@ -35,6 +40,7 @@ export interface QuoteApprovalTypes {
   services: {
     directory: ApprovalDirectory;
     contributor: ApprovalTaskContributor;
+    notify: () => Promise<void>;
   };
 }
 export const quoteApprovalParameters: ParameterGroup = {
@@ -59,6 +65,27 @@ const applicantOnly = ({
     code: 'APPLICANT_ONLY',
     message: 'Only the applicant may change this request.',
   };
+
+async function notifyResult(
+  context: import('@nocobase/lifecycle').TransitionHookContext<QuoteApprovalTypes>,
+) {
+  const scenario =
+    context.to === 'confirmed'
+      ? 'confirmed'
+      : context.to === 'rejected'
+        ? 'rejected'
+        : context.to === 'revision'
+          ? 'returned'
+          : undefined;
+  if (!scenario) return;
+  await enqueueCrmNotification(context.tx.handle as DatabaseConnection, {
+    id: eventIdentity('approval', context.entry.id),
+    scenario,
+    recipientId: context.record.applicantId,
+    targetPath: `/customers/${context.record.customerId}/details/opportunities/${context.record.opportunityId}/quotes/${context.record.quoteId}`,
+  });
+  context.tx.afterCommit(() => context.services.notify().catch(() => {}));
+}
 
 export const quoteApproval = defineApproval<QuoteApprovalTypes>({
   name: 'crmQuoteApprovals',
@@ -116,6 +143,7 @@ export const quoteApproval = defineApproval<QuoteApprovalTypes>({
       ],
     },
     submit: {
+      onTransition: notifyResult,
       from: ['draft', 'revision'],
       to: ['review', 'confirmed'],
       guard: applicantOnly,
@@ -142,8 +170,23 @@ export const quoteApproval = defineApproval<QuoteApprovalTypes>({
             'Only the applicant or a sales manager may withdraw this request.',
         },
     },
-    confirm: { from: 'review', to: 'confirmed', approvalOutcome: 'approved' },
-    reject: { from: 'review', to: 'rejected', approvalOutcome: 'rejected' },
-    return: { from: 'review', to: 'revision', approvalOutcome: 'returned' },
+    confirm: {
+      from: 'review',
+      to: 'confirmed',
+      approvalOutcome: 'approved',
+      onTransition: notifyResult,
+    },
+    reject: {
+      from: 'review',
+      to: 'rejected',
+      approvalOutcome: 'rejected',
+      onTransition: notifyResult,
+    },
+    return: {
+      from: 'review',
+      to: 'revision',
+      approvalOutcome: 'returned',
+      onTransition: notifyResult,
+    },
   },
 });

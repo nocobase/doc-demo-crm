@@ -1,3 +1,4 @@
+import crmNotifications from './crm-notifications.js';
 import customerFileRoutes from './customer-files.js';
 import quoteWorkflowRoutes from './quote-workflows.js';
 import quoteApprovalRoutes from './quote-approvals.js';
@@ -15,6 +16,7 @@ const routes: readonly AppRouteContribution<Application>[] = [
   salesRoutes,
   quoteApprovalRoutes,
   quoteWorkflowRoutes,
+  crmNotifications,
   ...customerFileRoutes,
 ];
 

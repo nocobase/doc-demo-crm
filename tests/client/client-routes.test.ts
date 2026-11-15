@@ -264,6 +264,9 @@ describe('app client routes', () => {
         'quoteWorkflowExecutions',
         'quoteWorkflowExecution',
       ].map((name) => ({ name, authorizedAs: 'composite:crm.workflow' })),
+      {name:'notificationLogs',authorizedAs:'notification.logs'},
+      {name:'crmNotificationEvents',authorizedAs:'notification.logs'},
+      {name:'notificationTemplates',authorizedAs:'notification.templates'},
       { name: 'databaseExplorer', authorizedAs: 'database-explorer' },
     ]);
   });

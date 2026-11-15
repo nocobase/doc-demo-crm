@@ -1,3 +1,8 @@
+import {
+  crmNotificationsToken,
+  enqueueCrmNotification,
+  eventIdentity,
+} from '../providers/crm-notifications.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
   authenticationToken,
@@ -306,10 +311,27 @@ export default defineApiRoutes(async (app: Application) => {
                   domain: 'crm',
                   message: 'Select an active user assigned a CRM sales role.',
                 });
+              const previous = await scopedRepository(
+                tx,
+                policies,
+                'crmCustomers',
+              ).findOne({ filter: { id } });
               await scopedRepository(tx, policies, 'crmCustomers').updateOne({
                 filter: { id },
                 values: { ownerId, updatedAt: new Date().toISOString() },
               });
+              if (ownerId && previous?.ownerId !== ownerId)
+                await enqueueCrmNotification(tx, {
+                  id: eventIdentity(
+                    app.appName,
+                    c.get('auth')!.user.id,
+                    `crm/access/${id}/owner`,
+                    c.req.valid('header')['idempotency-key'],
+                  ),
+                  scenario: 'assignment',
+                  recipientId: ownerId,
+                  targetPath: `/customers/${id}/details/overview`,
+                });
             } else {
               const { userIds } = Shares.parse(input);
               if (
@@ -351,6 +373,10 @@ export default defineApiRoutes(async (app: Application) => {
             return { id };
           },
         });
+        await app.container
+          .resolve(crmNotificationsToken)
+          .flush()
+          .catch(() => {});
         c.header('Idempotency-Replayed', String(result.replayed));
         return c.json({ data: result.data });
       },

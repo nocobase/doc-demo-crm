@@ -1,3 +1,4 @@
+import CrmNotificationsProvider from './crm-notifications.js';
 import QuoteApprovalsProvider from './quote-approvals.js';
 import CrmPermissionsProvider from './crm-permissions.js';
 import NotificationManagementProvider from './notification-management.js';
@@ -8,6 +9,7 @@ const serviceProviders: readonly ApplicationServiceProviderConstructor[] = [
   SubmissionProvider,
   CrmPermissionsProvider,
   NotificationManagementProvider,
+  CrmNotificationsProvider,
   QuoteApprovalsProvider,
 ];
 

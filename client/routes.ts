@@ -1,3 +1,4 @@
+import crmNotificationRoutes from './pages/settings/crm-notifications/routes.js';
 import databaseExplorerRoutes from './pages/settings/database-explorer/routes.js';
 import { createAppClientConfig } from '@nocobase/app-client';
 import { readAppClientRuntimeConfig } from '@nocobase/app-client/runtime';
@@ -399,6 +400,7 @@ export function createApplicationRoutes(
       settingsShellRoutes,
       systemSettingsRoutes,
       databaseExplorerRoutes,
+      crmNotificationRoutes,
     ],
     config.get<boolean>('notificationTemplates.invitationConfigured') === true,
   );

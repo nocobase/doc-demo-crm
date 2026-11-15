@@ -1,3 +1,4 @@
+import { crmNotificationsToken } from './crm-notifications.js';
 import type { Application } from '@nocobase/app-server/application';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import { databaseManagerToken, type DatabaseConnection } from '@nocobase/db';
@@ -66,6 +67,7 @@ export class QuoteApprovalService {
         (handle as DatabaseConnection | undefined) ?? database.connection();
       return {
         contributor: app.container.resolve(approvalTaskContributorToken),
+        notify: () => app.container.resolve(crmNotificationsToken).flush(),
         directory: {
           isActive: async (id) =>
             (await this.reviewers(connection)).some(
