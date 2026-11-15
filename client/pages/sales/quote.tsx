@@ -1,3 +1,4 @@
+import QuoteDocument from '../documents/quote-document.js';
 import { approvalPath } from './approval-path.js';
 import QuoteApprovalPanel, { type ApprovalView } from './approval.js';
 import { usePageBreadcrumb } from '@nocobase/app-client';
@@ -113,6 +114,7 @@ export default function QuoteDetail() {
         {quote ? (
           <QuoteApprovalPanel revision={approval.revision} onHandled={reload} />
         ) : null}
+        {quote ? <QuoteDocument revision={approval.revision} /> : null}
         <Outlet context={{ quote, reload }} />
       </PageContainer>
     </RouteChildPage>

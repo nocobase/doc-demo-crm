@@ -43,6 +43,8 @@ export interface FileListProps {
 }
 
 export interface FilePreviewDialogProps {
+  /** Restore focus when a surrounding data table replaces the original trigger. */
+  readonly returnFocus?: () => HTMLElement | null;
   readonly files: readonly FileRecord[];
   readonly initialIndex?: number;
   readonly open: boolean;

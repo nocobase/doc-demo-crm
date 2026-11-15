@@ -1,3 +1,4 @@
+import { CustomerAttachments } from '../documents/files.js';
 import { resolveListState } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useState } from 'react';
@@ -62,6 +63,8 @@ export default function CustomerTab() {
             reload={context.reload}
           />
         </>
+      ) : tab === 'attachments' ? (
+        <CustomerAttachments customerId={customer.id} revision={revision} />
       ) : tab === 'opportunities' ? (
         <SalesRelated
           customerId={customer.id}

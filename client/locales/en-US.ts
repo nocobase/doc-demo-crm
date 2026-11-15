@@ -12,6 +12,48 @@ const enUS = {
   ...fileUi,
   ...approvalUi,
   approval: approvalLocaleEnUS.approval,
+  documents: {
+    status: 'Status',
+    all: 'All states',
+    staged: 'Unlinked upload',
+    deleting: 'Cleanup pending',
+    removed: 'Attachment removed',
+    cleaned: 'Upload cleaned',
+    cancelHint:
+      'These uploads are not saved to the customer. Leave them private and discard this selection?',
+    cleanupConfirm:
+      'Permanently delete {{name}} from storage? This cannot be undone.',
+    attachments: 'Attachments',
+    add: 'Add attachments',
+    name: 'Filename',
+    type: 'Type',
+    size: 'Size',
+    uploader: 'Uploaded by',
+    date: 'Uploaded at',
+    actions: 'Actions',
+    download: 'Download',
+    remove: 'Remove',
+    removeTitle: 'Remove file?',
+    removeHint:
+      'Remove {{name}}? Customer users will no longer be able to access it.',
+    failed: 'The operation failed. Check your access and try again.',
+    uploadHint:
+      'Upload up to 10 files, 5 MB each. Save to attach them to this customer. Cancelled uploads remain private until administrator cleanup.',
+    quotation: 'Quotation document',
+    generate: 'Generate DOCX',
+    confirmFirst: 'Confirm this quotation before generating the document.',
+    quoteHint:
+      'The fixed English DOCX uses the confirmed quotation snapshot. Once issued, repeated downloads return the same document.',
+    settings: 'Files and quotation documents',
+    template: 'Quotation template',
+    templateDescription:
+      'Fixed English DOCX · revision {{revision}}. Template changes require a new application version.',
+    storageDescription:
+      'Private local storage · {{size}} MB per attachment · {{count}} files per submission. Each download checks current customer access.',
+    cleanup: 'Unlinked upload cleanup',
+    cleanupHint:
+      'Only unlinked uploads older than {{hours}} hours appear here. Removing them permanently deletes their stored bytes; attached and issued files are excluded.',
+  },
   quoteApproval: {
     reviewTask: 'Review quotation',
     reasonRequired: 'Enter a reason before submitting.',

@@ -219,6 +219,9 @@ describe('app client routes', () => {
         'sales-quote',
         'sales-quote-submit',
         'sales-quote-edit',
+        'customers-tab-attachments',
+        'customers-tab-attachments-edit',
+        'customers-tab-attachments-add',
         'sales-opportunity-new',
         'customers-edit',
         'customers-contact-new',
@@ -253,7 +256,14 @@ describe('app client routes', () => {
         name,
         authorizedAs: 'settings:authorization.default-access',
       })),
-      ...['quoteWorkflows','quoteWorkflowDefinitions','quoteWorkflowDefinition','quoteWorkflowExecutions','quoteWorkflowExecution'].map(name=>({name,authorizedAs:'composite:crm.workflow'})),
+      { name: 'crm.documents', authorizedAs: 'crm.documents' },
+      ...[
+        'quoteWorkflows',
+        'quoteWorkflowDefinitions',
+        'quoteWorkflowDefinition',
+        'quoteWorkflowExecutions',
+        'quoteWorkflowExecution',
+      ].map((name) => ({ name, authorizedAs: 'composite:crm.workflow' })),
       { name: 'databaseExplorer', authorizedAs: 'database-explorer' },
     ]);
   });

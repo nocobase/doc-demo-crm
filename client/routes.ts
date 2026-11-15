@@ -19,6 +19,18 @@ import {
 } from '@nocobase/app-client/plugins';
 
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
+  {
+    parent: 'settingsBusiness',
+    name: 'crm.documents',
+    path: '/documents',
+    auth: 'required',
+    authz: {
+      resource: { type: 'page', id: 'crm.documents' },
+      action: 'access',
+    },
+    navigation: { title: 'documents.settings', icon: Package },
+    componentLoader: () => import('./pages/settings/documents/index.js'),
+  },
   // Keep Home first; add business navigation after this landing page.
   {
     // Every signed-in user reaches the landing page. `authz: 'skip'` takes it out of page authorization entirely, so
@@ -133,7 +145,13 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         componentLoader: () => import('./pages/customers/detail.js'),
         children: [
           ...(
-            ['overview', 'contacts', 'followUps', 'opportunities'] as const
+            [
+              'overview',
+              'contacts',
+              'followUps',
+              'opportunities',
+              'attachments',
+            ] as const
           ).map((tab): AppClientRouteDefinition => ({
             name: `customers-tab-${tab}`,
             path: tab,
@@ -148,6 +166,20 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
                 },
                 componentLoader: () => import('./pages/customers/edit.js'),
               },
+              ...(tab === 'attachments'
+                ? [
+                    {
+                      name: 'customers-tab-attachments-add',
+                      path: 'addFiles',
+                      presentation: {
+                        kind: 'dialog' as const,
+                        title: 'documents.add',
+                      },
+                      componentLoader: () =>
+                        import('./pages/documents/add-files.js'),
+                    },
+                  ]
+                : []),
               ...(tab === 'contacts'
                 ? [
                     {

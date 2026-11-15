@@ -56,6 +56,7 @@ export default function CustomerDetail() {
     { value: 'contacts', label: t('crm.contacts') },
     { value: 'followUps', label: t('crm.followUps') },
     { value: 'opportunities', label: t('sales.opportunities') },
+    { value: 'attachments', label: t('documents.attachments') },
   ];
   const segment = location.pathname.slice(ownPath.length + 1).split('/')[0];
   const current = tabs.find((tab) => tab.value === segment)?.value;

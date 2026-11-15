@@ -171,7 +171,8 @@
     "@nocobase/app-cli": "^1.0.0-beta.32",
     "@nocobase/realtime": "^1.0.0-beta.2",
     "@nocobase/app-plugin-approval": "1.0.0-beta.11",
-    "@nocobase/app-plugin-task-center": "0.1.0-beta.5"
+    "@nocobase/app-plugin-task-center": "0.1.0-beta.5",
+    "carbone": "3.9.2"
   },
   "imports": {
     "#components/*": "./client/components/*.js",

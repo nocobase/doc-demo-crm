@@ -1,6 +1,6 @@
 import { useTranslation } from '@nocobase/i18n/client';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, useRef, type ReactElement } from 'react';
 
 import type {
   FilePreviewDialogProps,
@@ -25,6 +25,7 @@ const PDF_MARKUP_RESPONSE_ERROR =
 export function FilePreviewDialog({
   files,
   initialIndex = 0,
+  returnFocus,
   open,
   onOpenChange,
   onDownload,
@@ -39,6 +40,7 @@ export function FilePreviewDialog({
       key={`${normalizedIndex}:${files.map((file) => file.id).join(':')}`}
       files={files}
       initialIndex={normalizedIndex}
+      returnFocus={returnFocus}
       onOpenChange={onOpenChange}
       onDownload={onDownload}
       download={allowDownload}
@@ -49,6 +51,7 @@ export function FilePreviewDialog({
 }
 
 interface OpenFilePreviewDialogProps {
+  readonly returnFocus?: () => HTMLElement | null;
   readonly files: readonly FileRecord[];
   readonly initialIndex: number;
   readonly onOpenChange: (open: boolean) => void;
@@ -65,6 +68,7 @@ function OpenFilePreviewDialog(
   const {
     files,
     initialIndex,
+    returnFocus,
     onOpenChange,
     onDownload,
     download: allowDownload,
@@ -72,7 +76,19 @@ function OpenFilePreviewDialog(
     onError,
   } = inputProps;
 
+  const returnFocusRef = useRef<HTMLElement | null>(
+    typeof document !== 'undefined' &&
+      document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null,
+  );
   const [index, setIndex] = useState(initialIndex);
+  // App customization: download failures must remain visible inside the open preview.
+  const [downloadFailed, setDownloadFailed] = useState(false);
+  const handleDownloadError = (error: unknown) => {
+    setDownloadFailed(true);
+    reportDownloadError(onError, error);
+  };
   const file = files[index];
   if (!file) throw new Error('A preview file is required.');
   const downloadLabel =
@@ -81,13 +97,16 @@ function OpenFilePreviewDialog(
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent
+        finalFocus={returnFocus ?? returnFocusRef}
         className='flex max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] flex-col sm:max-w-4xl'
         showCloseButton
       >
         <div className='flex items-center justify-between gap-3 pr-10'>
           <div className='min-w-0'>
             <div className='flex min-w-0 items-center gap-2'>
-              <DialogTitle className='truncate'>{file.filename}</DialogTitle>
+              <DialogTitle className='truncate' title={file.filename}>
+                {file.filename}
+              </DialogTitle>
               {allowDownload ? (
                 <Button
                   type='button'
@@ -97,7 +116,7 @@ function OpenFilePreviewDialog(
                   aria-label={`${downloadLabel}: ${file.filename}`}
                   onClick={() =>
                     void downloadFile(file, onDownload).catch(
-                      (error: unknown) => reportDownloadError(onError, error),
+                      (error: unknown) => handleDownloadError(error),
                     )
                   }
                 >
@@ -142,6 +161,11 @@ function OpenFilePreviewDialog(
             ) : null}
           </div>
         </div>
+        {downloadFailed ? (
+          <p role='alert' className='text-sm text-destructive'>
+            {t('fileUi.downloadFailed')}
+          </p>
+        ) : null}
         {/* Only the preview scrolls; the title and its actions stay in view. */}
         <div className='-mx-4 min-h-0 flex-1 overflow-auto px-4'>
           <PreviewBody
@@ -151,7 +175,7 @@ function OpenFilePreviewDialog(
               allowDownload
                 ? () =>
                     void downloadFile(file, onDownload).catch(
-                      (error: unknown) => reportDownloadError(onError, error),
+                      (error: unknown) => handleDownloadError(error),
                     )
                 : undefined
             }
