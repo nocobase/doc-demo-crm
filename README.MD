@@ -1,39 +1,58 @@
 # Tutorial CRM
 
-A cumulative NocoBase 3 CRM through Lesson 7. The interface
-and sample business data default to English. Use Customers to manage customer
-details, contacts, follow-up records, opportunities and quotes. Products holds the price catalogue.
+A complete NocoBase 3 CRM reference application on `main`. The interface and
+optional sample business data default to English. Always use the latest code on
+`main` to run the app and compare features alongside the NocoBase 3 guides—you
+do not need to follow or check out historical lessons in order.
 
-| Stage      | Outcome                                             | Guide                        |
-| ---------- | --------------------------------------------------- | ---------------------------- |
-| `lesson-1` | Create, configure and run the application           | [Lesson 1](docs/lesson-1.md) |
-| `lesson-2` | Requirements and interactive prototype              | [Lesson 2](docs/lesson-2.md) |
-| `lesson-3` | Customers, contacts and follow-up records           | [Lesson 3](docs/lesson-3.md) |
-| `lesson-4` | Automated tests, build, local delivery and recovery | [Lesson 4](docs/lesson-4.md) |
-| `lesson-5` | Opportunities, product catalogue and quote snapshots | [Lesson 5](docs/lesson-5.md) |
-| `lesson-6` | Sales workspace and customer detail tabs | [Lesson 6](docs/lesson-6.md) |
-| `lesson-7` | Sales roles, ownership and read-only customer sharing | [Lesson 7](docs/lesson-7.md) |
+## What's included
+
+- **Sales workspace & customer records** (**Sales workspace**, **Customers**, **Products**): overview counts and recent activity, customer management, contacts, append-only follow-up records, opportunities, product catalogue and price-snapshot quotes.
+- **Roles, ownership & sharing** (**System settings → Users**): editable **Sales** and **Sales manager** permission sets, customer ownership assignment and read-only customer sharing.
+- **Quotation approvals & task center** (**My tasks**, **System settings → Workflow management**): discount-threshold quotation review, approve/return/reject/withdraw actions and execution history.
+- **Attachments & quotation documents** (**Customers → Attachments**, quote **Generate DOCX**, **System settings → Files and quotation documents**): access-controlled customer attachments and fixed-template DOCX generation from confirmed quotes.
+- **Notifications & scheduled reminders** (in-app inbox, **Customers → Reminders**, **System settings → Notifications / Scheduled reminders**): in-app notifications for customer assignment and approval outcomes, plus scheduled follow-up and quotation deadline reminders.
+- **Personal mail & customer correspondence** (**Mail**, **Customers → Mail**, **System settings → Mail administration**): contact-matched customer correspondence (requires configuring mailbox providers in `config.yml`).
+
+## Install and run
+
+Requires Node.js `>=24` and the `pnpm` version declared in `package.json`. From
+the latest `main` checkout:
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm nocobase config init --dialect sqlite --json
 pnpm nocobase config check --json
-pnpm dev
+APP_SAMPLE_DATA=true pnpm dev
 ```
 
-Open the exact `Local:` URL. Sign in with the local learning account `nocobase`
-(password `admin123`), then open **Customers**. Change the sample password before
-exposing the application. After initial startup, `pnpm nocobase db sample --json`
-loads three optional sample customers. `pnpm test` runs the Vitest suite.
+Open the exact `Local:` URL printed by `pnpm dev` (including its base path,
+`/main` by default). Sign in with the default local administrator account
+`nocobase` (password `admin123`). Replace the sample password before exposing
+the application.
 
-Check out a stage with `git switch -c my-crm lesson-3`; compare stages with
-`git diff lesson-2..lesson-3`. Git changes code only: preserve or separately
-restore configuration, database and storage. [Verification](docs/verification.md)
-records the tested runtime and delivery boundaries.
+- **Sample data**: `APP_SAMPLE_DATA=true` seeds the optional English sample data
+  (sample customers, contacts, follow-ups, products, an opportunity and a quote)
+  when initializing a fresh database. On an already initialized database, run
+  `pnpm nocobase db sample --json` to load them at any time; reruns preserve
+  existing edits.
+- **Updating to the latest version**: Pull `main`, run
+  `pnpm install --frozen-lockfile`, and start with `pnpm dev` (or run
+  `pnpm nocobase db apply --json` explicitly to apply pending migrations while
+  preserving existing data).
+- **Resetting a local demo**: Stop the app and run
+  `node scripts/reset-tutorial.mjs --force` (preview first with `--dry-run`) to
+  clear the main database, rerun migrations and initialization seeds, and load
+  sample data from the current checkout. See [tutorial reset](docs/tutorial-reset.md)
+  for details and safeguards.
+- **Testing roles & team access**: Seeded sample customers start unassigned and
+  no business role is granted automatically to all signed-in users. Create or
+  select users in **System settings → Users** and explicitly assign **Sales** or
+  **Sales manager** to test ownership, read-only sharing and quotation approvals.
+- **Automated tests**: Run `pnpm test` for the Vitest suite.
 
-For team access, explicitly assign **Sales** or **Sales manager** to selected users in **System settings → Users**. Existing customers remain unassigned until a manager sets their owner. See [Lesson 7](docs/lesson-7.md) for access checks and the forward-only migration boundary.
-
-Read [the design](docs/design.md) and [the first-release prototype](docs/prototype.html) before changing business behavior. The prototype simulates interactions; use the running application to verify persistence and authorization.
+Read [the design](docs/design.md) and [the first-release prototype](docs/prototype.html)
+before changing business behavior. Additional feature notes live under `docs/`.
 
 The framework reference below is retained for application maintenance. Follow
 [AGENTS.md](AGENTS.md) and the synchronized application skills for development.
