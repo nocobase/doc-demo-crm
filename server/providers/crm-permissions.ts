@@ -160,6 +160,33 @@ export const crmProducts = defineCompositeResource('crm.products', (r) =>
     ),
 );
 
+export const crmIntegrations = defineCompositeResource(
+  'crm.integrations',
+  (r) =>
+    r
+      .title({ key: 'integrations.resourceTitle', ns: 'app' })
+      .action('read', (a) =>
+        a
+          .title({ key: 'crmAccess.view', ns: 'app' })
+          .grant('deliveries', data('crmSyncDeliveries'))
+          .grant('targets', data('crmSyncTargets')),
+      )
+      .action('sync', (a) =>
+        a
+          .title({ key: 'integrations.syncAction', ns: 'app' })
+          .grant(
+            'deliveries',
+            data('crmSyncDeliveries').create('*').update('*'),
+          )
+          .grant('targets', data('crmSyncTargets')),
+      )
+      .action('configure', (a) =>
+        a
+          .title({ key: 'integrations.configureAction', ns: 'app' })
+          .grant('targets', data('crmSyncTargets').create('*').update('*')),
+      ),
+);
+
 function customerCondition(collection: string, customerIds: readonly string[]) {
   return buildFilter((f) =>
     f.or(
@@ -176,7 +203,12 @@ export default class CrmPermissionsProvider extends ServiceProvider<AppPluginApp
     const connection = this.app.container
       .resolve(databaseManagerToken)
       .connection();
-    for (const name of [...customerCollections, 'crmProducts'])
+    for (const name of [
+      ...customerCollections,
+      'crmProducts',
+      'crmSyncDeliveries',
+      'crmSyncTargets',
+    ])
       authz.database.collections.add({ name, title: name });
     authz.recordAccess.define(
       defineRecordAccess('crm.owned', (a) =>
@@ -242,6 +274,9 @@ export default class CrmPermissionsProvider extends ServiceProvider<AppPluginApp
       { section: 'crm' },
     );
     authz.ui.place(authz.compositeResources.define(crmProducts), {
+      section: 'crm',
+    });
+    authz.ui.place(authz.compositeResources.define(crmIntegrations), {
       section: 'crm',
     });
   }

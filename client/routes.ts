@@ -14,6 +14,8 @@ import {
   LayoutDashboard,
   ListTodo,
   Workflow,
+  KeyRound,
+  Plug,
 } from 'lucide-react';
 import settingsShellRoutes from './pages/settings/shell-routes.js';
 import {
@@ -70,6 +72,37 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     },
     breadcrumb: { title: 'crmMail.logs' },
     componentLoader: () => import('./pages/mail/logs.js'),
+  },
+  {
+    parent: 'settingsAccount',
+    name: 'settingsApiKeys',
+    path: '/api-keys',
+    auth: 'required',
+    authz: 'skip',
+    navigation: {
+      title: 'integrations.apiKeysTitle',
+      description: 'integrations.apiKeysNavDescription',
+      icon: KeyRound,
+    },
+    breadcrumb: { title: 'integrations.apiKeysTitle' },
+    componentLoader: () => import('./pages/settings/api-keys/index.js'),
+  },
+  {
+    parent: 'settingsBusiness',
+    name: 'crmIntegrationsSettings',
+    path: '/integrations',
+    auth: 'required',
+    authz: {
+      resource: { type: 'composite', id: 'crm.integrations' },
+      action: 'read',
+    },
+    navigation: {
+      title: 'integrations.title',
+      description: 'integrations.navDescription',
+      icon: Plug,
+    },
+    breadcrumb: { title: 'integrations.title' },
+    componentLoader: () => import('./pages/settings/integrations/index.js'),
   },
   {
     name: 'crm-schedules',
@@ -195,6 +228,12 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     navigation: { title: 'crm.title', icon: Building2 },
     componentLoader: () => import('./pages/customers/index.js'),
     children: [
+      {
+        name: 'customers-imports',
+        path: 'imports',
+        breadcrumb: { title: 'crmImports.title' },
+        componentLoader: () => import('./pages/customers/imports.js'),
+      },
       {
         name: 'customers-new',
         path: 'new',

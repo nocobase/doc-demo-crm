@@ -96,12 +96,21 @@ export default function CustomersPage() {
     [t],
   );
   const create = access.access?.createCustomer ? (
-    <Button
-      nativeButton={false}
-      render={<Link to={{ pathname: 'new', search: params.toString() }} />}
-    >
-      {t('crm.newCustomer')}
-    </Button>
+    <div className='flex items-center gap-2'>
+      <Button
+        variant='outline'
+        nativeButton={false}
+        render={<Link to='imports' />}
+      >
+        {t('crmImports.openButton')}
+      </Button>
+      <Button
+        nativeButton={false}
+        render={<Link to={{ pathname: 'new', search: params.toString() }} />}
+      >
+        {t('crm.newCustomer')}
+      </Button>
+    </div>
   ) : undefined;
   const updateFilter = (key: string, value: string) => {
     setParams((old) => {

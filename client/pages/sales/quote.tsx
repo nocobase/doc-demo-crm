@@ -1,4 +1,5 @@
 import QuoteDocument from '../documents/quote-document.js';
+import QuoteErpSync from './quote-erp-sync.js';
 import { approvalPath } from './approval-path.js';
 import QuoteApprovalPanel, { type ApprovalView } from './approval.js';
 import { usePageBreadcrumb } from '@nocobase/app-client';
@@ -115,6 +116,12 @@ export default function QuoteDetail() {
           <QuoteApprovalPanel revision={approval.revision} onHandled={reload} />
         ) : null}
         {quote ? <QuoteDocument revision={approval.revision} /> : null}
+        {quote && quoteId ? (
+          <QuoteErpSync
+            quoteId={quoteId}
+            confirmed={approval.data?.data.status === 'confirmed'}
+          />
+        ) : null}
         <Outlet context={{ quote, reload }} />
       </PageContainer>
     </RouteChildPage>
