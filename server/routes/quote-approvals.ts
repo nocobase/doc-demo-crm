@@ -161,10 +161,16 @@ export default defineApiRoutes(async (app: Application) => {
       const record = await connection
         .repository(lifecycle)
         .findOne({ filter: { quoteId } });
+      const definition = record
+        ? service.runtime.recordLifecycle(lifecycle, { ...record, id: quoteId })
+        : lifecycle;
       const frozen = record
-        ? await service.parameters.snapshot('crm', lifecycle, quoteId)
+        ? await service.parameters.snapshot('crm', definition, quoteId)
         : undefined;
-      const configured = await service.parameters.read('crm', 'discount');
+      const configured = await service.parameters.readConfiguration(
+        'crm',
+        definition,
+      );
       const thresholdPercent = Number(
         frozen?.values.thresholdPercent ??
           configured?.values.thresholdPercent ??
@@ -181,9 +187,9 @@ export default defineApiRoutes(async (app: Application) => {
           },
         });
       const [view, runs, actions] = await Promise.all([
-        service.runtime.view(lifecycle, quoteId, actor),
-        service.approvals.runViewsFor(lifecycle, quoteId),
-        service.approvals.actionsFor(lifecycle, quoteId, actor),
+        service.runtime.view(definition, quoteId, actor),
+        service.approvals.runViewsFor(definition, quoteId),
+        service.approvals.actionsFor(definition, quoteId, actor),
       ]);
       const people: Record<string, string> = {};
       const ids = new Set<string>([
@@ -253,13 +259,26 @@ export default defineApiRoutes(async (app: Application) => {
           const maxDiscountBasisPoints = Math.max(
             ...quote.lines.map((line) => Math.round(line.discount * 100)),
           );
+          const existing = await tx
+            .repository(lifecycle)
+            .findOne({ filter: { quoteId } });
+          const definition = existing
+            ? service.runtime.recordLifecycle(lifecycle, {
+                ...existing,
+                id: quoteId,
+              })
+            : lifecycle;
           const frozen = await service.parameters.snapshot(
             'crm',
-            lifecycle,
+            definition,
             quoteId,
             tx,
           );
-          const config = await service.parameters.read('crm', 'discount', tx);
+          const config = await service.parameters.readConfiguration(
+            'crm',
+            definition,
+            tx,
+          );
           const thresholdBasisPoints = Math.round(
             Number(
               frozen?.values?.thresholdPercent ??
@@ -282,9 +301,6 @@ export default defineApiRoutes(async (app: Application) => {
             maxDiscountBasisPoints,
             thresholdBasisPoints,
           };
-          const existing = await tx
-            .repository(lifecycle)
-            .findOne({ filter: { quoteId } });
           if (!existing)
             await service.runtime.create(
               lifecycle,
@@ -300,14 +316,14 @@ export default defineApiRoutes(async (app: Application) => {
               { actor, transaction: tx },
             );
           else
-            await service.runtime.fire(lifecycle, quoteId, 'revise', {
+            await service.runtime.fire(definition, quoteId, 'revise', {
               actor,
               input: values,
               transaction: tx,
               requestId: `${c.req.valid('header')['idempotency-key']}:revise`,
             });
           const submitted = await service.runtime.fire(
-            lifecycle,
+            definition,
             quoteId,
             'submit',
             {
@@ -337,7 +353,7 @@ export default defineApiRoutes(async (app: Application) => {
         await authorizeCrm(c.get('authz'), 'editQuote'),
       ).quote(customerId, opportunityId, quoteId);
       const result = await service.runtime.fire(
-        lifecycle,
+        await service.runtime.boundLifecycle(lifecycle, quoteId),
         quoteId,
         'withdraw',
         {
@@ -366,7 +382,10 @@ export default defineApiRoutes(async (app: Application) => {
       const input = c.req.valid('json');
       if (!(await service.reviewers()).some((person) => person.id === actor.id))
         throw denied();
-      const tasks = await service.approvals.tasksFor(lifecycle, quoteId);
+      const tasks = await service.approvals.tasksFor(
+        await service.runtime.boundLifecycle(lifecycle, quoteId),
+        quoteId,
+      );
       if (!tasks.some((task) => task.id === input.taskId)) throw denied();
       const result = await service.approvals.perform({
         action: input.action,

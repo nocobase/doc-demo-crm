@@ -326,12 +326,10 @@ test('delivers committed customer and approval events once to their intended inb
   const accepted = await connection
     .repository('crmNotificationEvents')
     .findOne({ filter: { id: 'retry-event' } });
-  await connection
-    .repository('crmNotificationEvents')
-    .updateOne({
-      filter: { id: 'retry-event' },
-      values: { status: 'queued', notificationId: null },
-    });
+  await connection.repository('crmNotificationEvents').updateOne({
+    filter: { id: 'retry-event' },
+    values: { status: 'queued', notificationId: null },
+  });
   await service.flush();
   expect(
     (
@@ -357,21 +355,19 @@ test('delivers committed customer and approval events once to their intended inb
   expect(await connection.repository('crmNotificationEvents').count()).toBe(
     count,
   );
-  const templates = await data(await admin.fetch('/notifications/templates'));
+  const templates = await data(await admin.fetch('/notifications/kinds'));
   expect(
     templates.filter((value: { id: string }) => value.id.startsWith('crm.')),
   ).toHaveLength(6);
   const preview = await admin.fetch(
-    '/notifications/templates/crm.confirmed/preview',
+    '/notifications/kinds/crm.confirmed/preview',
     write({ locale: 'zh-CN' }),
   );
   expect(preview.status).toBe(200);
   expect(await connection.repository('crmNotificationEvents').count()).toBe(
     count,
   );
-  expect((await sales.session.fetch('/notifications/templates')).status).toBe(
-    403,
-  );
+  expect((await sales.session.fetch('/notifications/kinds')).status).toBe(403);
   expect((await sales.session.fetch('/crmNotifications/events')).status).toBe(
     403,
   );

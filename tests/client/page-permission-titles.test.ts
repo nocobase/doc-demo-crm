@@ -4,13 +4,13 @@ import {
   defineAppRoutes,
   type AppClientRegisteredRoute,
 } from '@nocobase/app-client/plugins';
-import applicationRoutes from '../../client/routes.js';
+import { createApplicationRoutes } from '../../client/routes.js';
 import enUS from '../../client/locales/en-US.js';
 import zhCN from '../../client/locales/zh-CN.js';
 import {
   pagePermissionResources,
   pagePermissionTitle,
-} from '../../client/pages/settings/page-permissions.js';
+} from '@nocobase/app-plugin-authorization/client/settings';
 import { pagePermissionTitles } from '../../client/pages/settings/page-permission-titles.js';
 
 const flatten = (
@@ -31,7 +31,7 @@ const application = resolveAppClientContributions([
   {
     packageName: 'title-check-app',
     source: 'application',
-    routes: applicationRoutes,
+    routes: createApplicationRoutes(),
   },
 ]);
 const pages = flatten(application.routes).filter(

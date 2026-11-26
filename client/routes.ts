@@ -1,35 +1,27 @@
-import { Mail, BookOpen, Sparkles } from 'lucide-react';
-import { modelsRoute } from '@nocobase/app-plugin-agents/client/routes';
+import { Mail, BookOpen } from 'lucide-react';
 import { knowledgeDefinition } from '@nocobase/app-plugin-knowledge/client/routes';
 import crmNotificationRoutes from './pages/settings/crm-notifications/routes.js';
 import databaseExplorerRoutes from './pages/settings/database-explorer/routes.js';
-import { createAppClientConfig } from '@nocobase/app-client';
-import { readAppClientRuntimeConfig } from '@nocobase/app-client/runtime';
-import { includeNotificationTemplateRoutes } from './pages/settings/notification-routes.js';
-import systemSettingsRoutes from './pages/settings/routes.js';
 import {
   Home,
   Building2,
   Package,
   LayoutDashboard,
   ListTodo,
-  Workflow,
-  KeyRound,
   Plug,
 } from 'lucide-react';
+import personalSettingsRoutes from './pages/me/routes.js';
+import workflowSettingsRoutes from './pages/settings/workflows/routes.js';
 import settingsShellRoutes from './pages/settings/shell-routes.js';
 import {
   defineAppRoutes,
+  defineSystemSettingsRoutes,
+  SYSTEM_SETTINGS_CATEGORIES,
   type AppClientRouteContribution,
   type AppClientRouteDefinition,
 } from '@nocobase/app-client/plugins';
 
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
-  {
-    ...modelsRoute,
-    parent: 'settingsAi',
-    navigation: { title: 'crmAssistant.models', icon: Sparkles },
-  },
   {
     // Every signed-in user reaches the landing page. `authz: 'skip'` takes it out of page authorization entirely, so
     // no permission change can leave a user signed in with nowhere to land.
@@ -73,70 +65,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     breadcrumb: { title: 'crmMail.logs' },
     componentLoader: () => import('./pages/mail/logs.js'),
   },
-  {
-    parent: 'settingsAccount',
-    name: 'settingsApiKeys',
-    path: '/api-keys',
-    auth: 'required',
-    authz: 'skip',
-    navigation: {
-      title: 'integrations.apiKeysTitle',
-      description: 'integrations.apiKeysNavDescription',
-      icon: KeyRound,
-    },
-    breadcrumb: { title: 'integrations.apiKeysTitle' },
-    componentLoader: () => import('./pages/settings/api-keys/index.js'),
-  },
-  {
-    parent: 'settingsBusiness',
-    name: 'crmIntegrationsSettings',
-    path: '/integrations',
-    auth: 'required',
-    authz: {
-      resource: { type: 'composite', id: 'crm.integrations' },
-      action: 'read',
-    },
-    navigation: {
-      title: 'integrations.title',
-      description: 'integrations.navDescription',
-      icon: Plug,
-    },
-    breadcrumb: { title: 'integrations.title' },
-    componentLoader: () => import('./pages/settings/integrations/index.js'),
-  },
-  {
-    name: 'crm-schedules',
-    parent: 'settingsBusiness',
-    path: '/crm-schedules',
-    auth: 'required',
-    authz: {
-      resource: { type: 'page', id: 'scheduler.schedules' },
-      action: 'access',
-    },
-    navigation: { title: 'reminders.schedules', icon: Workflow },
-    componentLoader: () => import('./pages/reminders/schedules.js'),
-  },
-  {
-    name: 'crm-mail-admin',
-    parent: 'settingsBusiness',
-    path: '/mail-administration',
-    auth: 'required',
-    authz: { resource: { type: 'page', id: 'mail.admin' }, action: 'access' },
-    navigation: { title: 'crmMail.admin', icon: Mail },
-    componentLoader: () => import('./pages/mail/logs.js'),
-  },
-  {
-    parent: 'settingsBusiness',
-    name: 'crm.documents',
-    path: '/documents',
-    auth: 'required',
-    authz: {
-      resource: { type: 'page', id: 'crm.documents' },
-      action: 'access',
-    },
-    navigation: { title: 'documents.settings', icon: Package },
-    componentLoader: () => import('./pages/settings/documents/index.js'),
-  },
   // Keep Home first; add business navigation after this landing page.
   {
     name: 'crm-tasks',
@@ -165,48 +93,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
               title: 'quoteApproval.submit',
             },
             componentLoader: () => import('./pages/sales/submit-quote.js'),
-          },
-        ],
-      },
-    ],
-  },
-  {
-    parent: 'settingsBusiness',
-    name: 'quoteWorkflows',
-    path: '/quote-workflows',
-    auth: 'required',
-    authz: {
-      resource: { type: 'composite', id: 'crm.workflow' },
-      action: 'read',
-    },
-    navigation: { title: 'quoteApproval.workflows', icon: Workflow },
-    componentLoader: () => import('./pages/settings/quote-workflows/index.js'),
-    children: [
-      {
-        name: 'quoteWorkflowDefinitions',
-        path: 'definitions',
-        componentLoader: () =>
-          import('./pages/settings/quote-workflows/definitions.js'),
-        children: [
-          {
-            name: 'quoteWorkflowDefinition',
-            path: 'quotation',
-            componentLoader: () =>
-              import('./pages/settings/quote-workflows/definition.js'),
-          },
-        ],
-      },
-      {
-        name: 'quoteWorkflowExecutions',
-        path: 'executions',
-        componentLoader: () =>
-          import('./pages/settings/quote-workflows/executions.js'),
-        children: [
-          {
-            name: 'quoteWorkflowExecution',
-            path: ':executionId',
-            componentLoader: () =>
-              import('./pages/settings/quote-workflows/execution.js'),
           },
         ],
       },
@@ -451,16 +337,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     navigation: { title: 'crmAssistant.knowledge', icon: BookOpen },
   },
   {
-    // Declares no navigation, so the application decides where its entry goes (for example a sidebar item with an
-    // unread badge). The plugin's API answers each person's own messages only, so the page needs no authorization of
-    // its own.
-    authz: 'skip',
-    auth: 'required',
-    componentLoader: () => import('./pages/inbox.js'),
-    name: 'inbox',
-    path: '/inbox',
-  },
-  {
     auth: 'guest',
     authz: 'skip',
     componentLoader: () => import('./pages/auth/login.js'),
@@ -499,24 +375,47 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
   },
 ]);
 
-// The System settings shell stays registered: it shows only the modules a viewer may open, and none until the
-// application or its plugins contribute one. Business administration such as `./pages/settings/routes.js` joins it.
-export function createApplicationRoutes(
-  rawConfig: unknown = readAppClientRuntimeConfig(),
-): readonly AppClientRouteContribution[] {
-  const config = createAppClientConfig({ rawConfig });
-  return includeNotificationTemplateRoutes(
-    [
-      appRoutes,
-      settingsShellRoutes,
-      systemSettingsRoutes,
-      databaseExplorerRoutes,
-      crmNotificationRoutes,
-    ],
-    config.get<boolean>('notificationTemplates.invitationConfigured') === true,
-  );
+const crmSettingsRoutes = defineSystemSettingsRoutes([
+  {
+    parent: SYSTEM_SETTINGS_CATEGORIES.data,
+    name: 'crmIntegrationsSettings',
+    path: '/integrations',
+    auth: 'required',
+    authz: {
+      resource: { type: 'composite', id: 'crm.integrations' },
+      action: 'read',
+    },
+    navigation: {
+      title: 'integrations.title',
+      description: 'integrations.navDescription',
+      icon: Plug,
+    },
+    breadcrumb: { title: 'integrations.title' },
+    componentLoader: () => import('./pages/settings/integrations/index.js'),
+  },
+  {
+    parent: SYSTEM_SETTINGS_CATEGORIES.data,
+    name: 'crm.documents',
+    path: '/documents',
+    auth: 'required',
+    authz: {
+      resource: { type: 'page', id: 'crm.documents' },
+      action: 'access',
+    },
+    navigation: { title: 'documents.settings', icon: Package },
+    componentLoader: () => import('./pages/settings/documents/index.js'),
+  },
+]);
+
+export function createApplicationRoutes(): readonly AppClientRouteContribution[] {
+  return [
+    appRoutes,
+    settingsShellRoutes,
+    personalSettingsRoutes,
+    workflowSettingsRoutes,
+    databaseExplorerRoutes,
+    crmSettingsRoutes,
+    crmNotificationRoutes,
+  ];
 }
-
-const routes: readonly AppClientRouteContribution[] = createApplicationRoutes();
-
-export default routes;
+export default createApplicationRoutes();

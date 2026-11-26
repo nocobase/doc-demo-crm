@@ -114,6 +114,7 @@ const zhCN: AppResource = {
       '已接受仅表示服务商接受邮件，不表示收件人收到。结果未知时请先核查，不要直接重发。',
   },
   crmNotifications: {
+    title: 'CRM 通知记录',
     followUpDue: '客户跟进到期',
     quoteDue: '报价回复到期',
     logs: '投递记录',

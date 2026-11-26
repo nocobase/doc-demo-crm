@@ -339,10 +339,8 @@ describe('app server', () => {
             new Hono().get('/test-runtime', (c) => c.json({ ok: true })),
           ),
         ],
-        serviceProviders: [
-          ...appRuntime.serviceProviders,
-          TestRuntimeApplicationProvider,
-        ],
+        // This isolated runtime installs only the test plugin that supplies this provider.
+        serviceProviders: [TestRuntimeApplicationProvider],
       },
       scope,
     );
@@ -721,10 +719,17 @@ describe('app server', () => {
     );
     expect(created.status).toBe(200);
     const key = (await created.json()) as { id: string; key: string };
-    const authenticated = await requestApp(app, `${baseUrl}/api/users`, {
+    const authenticated = await requestApp(
+      app,
+      `${baseUrl}/api/authorization/permissions`,
+      { headers: { 'x-api-key': key.key } },
+    );
+    expect(authenticated.status).toBe(200);
+    // Managing accounts is a person's only: the session lists users, no key does.
+    const keyUsers = await requestApp(app, `${baseUrl}/api/users`, {
       headers: { 'x-api-key': key.key },
     });
-    expect(authenticated.status).toBe(200);
+    expect(keyUsers.status).toBe(403);
     const revoked = await requestApp(
       app,
       `${baseUrl}/api/auth/api-key/delete`,
@@ -735,9 +740,11 @@ describe('app server', () => {
       },
     );
     expect(revoked.status).toBe(200);
-    const rejected = await requestApp(app, `${baseUrl}/api/users`, {
-      headers: { 'x-api-key': key.key },
-    });
+    const rejected = await requestApp(
+      app,
+      `${baseUrl}/api/authorization/permissions`,
+      { headers: { 'x-api-key': key.key } },
+    );
     expect(rejected.status).toBe(401);
   });
 
@@ -1242,7 +1249,14 @@ function createTestApp(options: CreateTestAppOptions = {}): TestApp {
     },
   };
   const config = createTestConfig(configValues);
-  const paths = createAppPaths({ rootDir: '/test/app-template-default' });
+  const storageDir = mkdtempSync(
+    path.join(tmpdir(), 'app-template-default-storage-'),
+  );
+  tempDirs.push(storageDir);
+  const paths = createAppPaths({
+    rootDir: '/test/app-template-default',
+    storageDir,
+  });
   const database =
     options.database === false
       ? undefined
@@ -1409,6 +1423,16 @@ function createInstalledStandaloneServer(
 }
 
 function createEmbeddedPluginFixture(rootDir: string): void {
+  // The embedded host loads the application's migration sources from its own root.
+  const main = path.join(rootDir, 'dist', 'database', 'main');
+  mkdirSync(main, { recursive: true });
+  for (const directory of ['migrations', 'seeds']) {
+    symlinkSync(
+      path.resolve(import.meta.dirname, '../../database/main', directory),
+      path.join(main, directory),
+      'junction',
+    );
+  }
   // Derived from the composition root rather than written out again. The embedded server resolves every plugin
   // `server/plugins.ts` declares, and a temporary root resolves nothing it is not given, so a separate list has to
   // be updated whenever a plugin is registered — and a copy of a list is a copy that goes stale.

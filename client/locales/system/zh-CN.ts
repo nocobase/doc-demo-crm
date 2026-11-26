@@ -2,7 +2,6 @@ import databaseExplorer from '../../pages/settings/database-explorer/zh-CN.js';
 import settings from './settings-zh-CN.js';
 import type { SystemResource } from './en-US.js';
 import deviceApprovalZhCN from '#extensions/nocobase-device-approval/locales/zh-CN';
-import inboxZhCN from '#extensions/nocobase-inbox/locales/zh-CN';
 
 /** The Chinese copy of what the template ships; see `./en-US.ts`. */
 const systemZhCN: SystemResource = {
@@ -77,8 +76,6 @@ const systemZhCN: SystemResource = {
 
   // The UI Library block of the `/device` page; the keys below may reword it.
   ...deviceApprovalZhCN,
-  // The UI Library block of the `/inbox` page; the keys below may reword it.
-  ...inboxZhCN,
   // Shared form wording overrides the defaults included by composed blocks.
   formFeedback: {
     field: '此字段的值未通过校验，请检查并修改后重试。',
@@ -87,12 +84,6 @@ const systemZhCN: SystemResource = {
     network: '无法连接，请检查网络后重试。已保留您的输入。',
     denied: '当前权限无法提交此表单。已保留您的输入。',
   },
-  // The UI Library component of the header's inbox button.
-  'inboxButton.title': '收件箱',
-  'inboxButton.pending': '收件箱，{{count}} 项待处理',
-  'inboxButton.unread': '收件箱，{{count}} 条未读',
-  'inboxButton.pendingHint': '{{count}} 项等你处理，处理后减少。',
-  'inboxButton.unreadHint': '{{count}} 条未读，阅读后减少。',
   'auth.welcome': '欢迎回来',
   'auth.loginDescription': '使用用户名或邮箱和密码登录',
   'auth.registerTitle': '创建账户',
@@ -160,10 +151,15 @@ const systemZhCN: SystemResource = {
   'navigation.brandHome': 'NocoBase 首页',
   'navigation.brandApps': 'NocoBase 应用',
   'routeOverlay.close': '关闭',
+  'routeOverlay.discardTitle': '放弃修改？',
+  'routeOverlay.discardDescription': '修改尚未保存，离开后将丢失。',
+  'routeOverlay.keepEditing': '继续编辑',
+  'routeOverlay.discard': '放弃',
   'status.deniedDescription': '你没有访问 {{label}} 的权限。',
   'status.routeFailedDescription':
     '无法加载 {{packageName}} 的路由 {{label}}。',
   shell: {
+    basedOnTemplate: '基于 {{name}} 模板 v{{version}}',
     brandPartnership: 'AI + <brand>NocoBase</brand>',
     buildReliableSystems: 'Build reliable business systems',
   },
@@ -407,6 +403,7 @@ const systemZhCN: SystemResource = {
     description: '前往本应用的页面。',
     breadcrumb: '面包屑',
     breadcrumbMore: '显示中间层级',
+    moreActions: '更多操作',
     back: '返回',
     backTo: '返回{{label}}',
   },
@@ -414,6 +411,11 @@ const systemZhCN: SystemResource = {
     noResults: '无结果',
     sortAscending: '升序',
     sortDescending: '降序',
+    sort: '排序',
+    sortBy: '排序方式',
+    filters: '筛选',
+    filtersApplied: '筛选 · {{count}}',
+    selectPage: '全选本页',
     hideColumn: '隐藏',
     view: '视图',
     toggleColumns: '显示列',

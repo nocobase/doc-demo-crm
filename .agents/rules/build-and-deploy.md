@@ -47,3 +47,5 @@ TypeScript and compiled JavaScript use the same source checksum for migration hi
 ## Server start log
 
 `pnpm dev` owns the ready banner and public URL; `APP_SERVER_START_LOG=false` suppresses the underlying listener announcement through the `env` of `server/config/server.ts`. Keep that mapping when editing deployment environment settings. Request starts, request headers and config diagnostics use DEBUG; the normal INFO output contains completion summaries. See the shared application development Skill for hosted logging and upgrade limits.
+
+CRM keeps SQLite in production dependencies. The build wrapper reuses the launching pnpm executable for the runtime dependency install in `dist/`, which has its own generated manifest.

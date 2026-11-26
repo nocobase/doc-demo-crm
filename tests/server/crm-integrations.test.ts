@@ -79,6 +79,12 @@ test('scoped API keys, idempotent external lead intake, key rotation/revocation,
   const admin = await signIn(testApp, DEFAULT_ADMIN_CREDENTIALS);
 
   // 1. Scope options expose CRM groups and reflect user's held permissions
+  const grantable = await data(await alex.session.fetch('/apiKeys/grantable'));
+  expect(grantable.mayCreate).toBe(true);
+  expect(
+    grantable.templates.map((template: { id: string }) => template.id),
+  ).toEqual(expect.arrayContaining(['lead-intake', 'erp-sync']));
+  expect((await alex.session.fetch('/systemApiKeys')).status).toBe(403);
   const alexScopes = await data(
     await alex.session.fetch('/apiKeys/scopeOptions'),
   );

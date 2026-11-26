@@ -11,6 +11,12 @@ import { createStandaloneServer } from '../../server/standalone.js';
 
 const test = createAppTest({
   createServer: createStandaloneServer,
+  server: {
+    env: {
+      APP_PUBLIC_ORIGIN: 'http://localhost',
+      BETTER_AUTH_TRUSTED_ORIGINS: 'http://localhost',
+    },
+  },
   config: {
     app: { publicOrigin: 'http://localhost' },
     auth: { secret: 'test-auth-secret-at-least-32-characters' },

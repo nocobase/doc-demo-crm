@@ -1,5 +1,6 @@
 import { crmNotificationsToken } from './crm-notifications.js';
 import type { Application } from '@nocobase/app-server/application';
+import { queueServiceToken } from '@nocobase/app-server/queue';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import { databaseManagerToken, type DatabaseConnection } from '@nocobase/db';
 import { authorizationToken } from '@nocobase/app-plugin-authorization/server';
@@ -40,9 +41,6 @@ export class QuoteApprovalService {
       schedule: executors.getScheduleExecutor('doc-demo-crm'),
       jobName: 'doc-demo-crm/quote-approval-effects',
       sweepEveryMs: 60000,
-      onSweep: async () => {
-        await this.approvals.sweep();
-      },
     });
     const store = createRepositoryLifecycleStore(database, {
       collections: {
@@ -87,14 +85,16 @@ export class QuoteApprovalService {
       parameterConfiguration: {
         store: this.parameters,
         scope: () => 'crm',
-        snapshotRequired: (record) =>
-          !['draft'].includes(String(record.status)),
       },
     });
     this.approvals = new ApprovalService(
       this.runtime,
       [quoteApproval.approval as unknown as Approval<never>],
       services,
+      {
+        queue: app.container.resolve(queueServiceToken),
+        schedule: executors.getScheduleExecutor('crm.quote-approval-clock'),
+      },
     );
   }
   async reviewers(
@@ -142,8 +142,11 @@ export default class QuoteApprovalsProvider extends ServiceProvider<Application>
   override async start() {
     const service = this.app.container.resolve(quoteApprovalServiceToken);
     await service.jobs.start(service.runtime);
+    await service.approvals.start();
   }
   override async shutdown() {
-    await this.app.container.resolve(quoteApprovalServiceToken).jobs.shutdown();
+    const service = this.app.container.resolve(quoteApprovalServiceToken);
+    await service.approvals.shutdown();
+    await service.jobs.shutdown();
   }
 }

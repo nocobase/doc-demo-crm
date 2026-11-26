@@ -89,13 +89,13 @@ async function notifyResult(
 
 export const quoteApproval = defineApproval<QuoteApprovalTypes>({
   name: 'crmQuoteApprovals',
+  key: 'crmQuoteApprovals',
+  definitionField: 'approvalDefinition',
   collection: 'crmQuoteApprovals',
   initial: 'draft',
   version: 1,
   parameters: { thresholdPercent: 10 },
   parameterConfiguration: {
-    readMode: 'snapshot',
-    snapshotTransition: 'submit',
     groups: [quoteApprovalParameters],
   },
   applicant: (record) => record.applicantId,

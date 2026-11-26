@@ -12,6 +12,7 @@ import {
 import { EMPTY_ARRAY } from '#lib/constants';
 
 import { matchRouteTree } from './route-navigation.js';
+import { withSettingsShell } from './settings-shell.js';
 
 /* eslint-disable react-refresh/only-export-components -- provider and hooks are intentionally colocated */
 
@@ -34,6 +35,30 @@ const RouteSearchContext = createContext<ReadonlyMap<string, string>>(
 /** Queries belong to the page that was visited, never to a child currently covering it. */
 export function useRouteSearches(): ReadonlyMap<string, string> {
   return useContext(RouteSearchContext);
+}
+
+/**
+ * The query to link back to an ancestor page with, such as a detail's list.
+ *
+ * It is the query recorded when the ancestor was last visited. After a direct entry or a reload nothing is recorded,
+ * so it takes the ancestor's public keys from the current URL instead, where the links that led here carried them
+ * (a list links to its records with its own query). Only the listed keys are taken: a detail's own parameters never
+ * reach its list.
+ */
+export function useAncestorSearch(
+  pathname: string,
+  publicKeys: readonly string[],
+): string {
+  const searches = useRouteSearches();
+  const { search } = useLocation();
+  const recorded = searches.get(pathname.replace(/\/+$/u, '') || '/');
+  if (recorded !== undefined) return recorded;
+  const kept = new URLSearchParams();
+  for (const [key, value] of new URLSearchParams(search)) {
+    if (publicKeys.includes(key)) kept.append(key, value);
+  }
+  const query = kept.toString();
+  return query ? `?${query}` : '';
 }
 
 const RouteTreeContext = createContext<readonly AppClientRegisteredRoute[]>([]);
@@ -74,9 +99,11 @@ export function useRouteAccess(): RouteAccess {
  */
 export function RouteTreeProvider({
   children,
-  routes,
+  routes: registered,
   access,
 }: RouteTreeProviderProps): ReactElement {
+  // Settings pages always sit under the Settings group, whether given registered or already gathered.
+  const routes = useMemo(() => withSettingsShell(registered), [registered]);
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/u, '') || '/';
   const search = location.search;

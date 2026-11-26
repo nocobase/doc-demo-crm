@@ -7,11 +7,15 @@ import {
   TestI18nProvider,
   createTestI18nRuntime,
 } from '@nocobase/i18n/testing';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { Link, MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { Breadcrumbs } from '../../client/components/breadcrumbs.js';
-import { RouteTreeProvider } from '../../client/routing/route-context.js';
+import {
+  RouteTreeProvider,
+  useAncestorSearch,
+} from '../../client/routing/route-context.js';
+import { TABLE_URL_KEYS } from '../../client/hooks/use-table-url-state.js';
 import { navigationDestination } from '../../client/routing/navigation-destination.js';
 import { routeKey } from '../../client/routing/route-navigation.js';
 import enUS from '../../client/locales/en-US.js';
@@ -115,6 +119,35 @@ describe('navigation destinations', () => {
 });
 
 describe('parent navigation', () => {
+  it('keeps the list reachable when a child page has no record title', () => {
+    const child: AppClientRegisteredRoute = {
+      ...page('record', '/orders/:id'),
+      presentation: { kind: 'child-page' },
+    };
+    const tree = [
+      { ...parent, breadcrumb: { title: 'Orders' }, children: [child] },
+    ];
+    const { container } = render(
+      <TestI18nProvider runtime={runtime}>
+        <MemoryRouter initialEntries={['/orders/42']}>
+          <RouteTreeProvider routes={tree} access={allowed}>
+            <PageBreadcrumbProvider>
+              <Breadcrumbs />
+            </PageBreadcrumbProvider>
+          </RouteTreeProvider>
+        </MemoryRouter>
+      </TestI18nProvider>,
+    );
+    expect(container.querySelector('[aria-current="page"]')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Orders' })).toHaveAttribute(
+      'href',
+      '/orders',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Back to Orders' }),
+    ).toHaveAttribute('href', '/orders');
+  });
+
   it('uses the same source and state for the desktop breadcrumb and mobile parent link', () => {
     renderTrail();
     const desktop = screen.getByRole('link', { name: 'Completed' });
@@ -168,5 +201,40 @@ describe('parent navigation', () => {
     expect(
       screen.getByRole('link', { name: 'Back to Completed' }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('ancestor return query', () => {
+  const keys = [...TABLE_URL_KEYS, 'q'];
+  function Probe() {
+    return (
+      <>
+        <Link to='/orders/42?page=2&tab=notes'>Record</Link>
+        <output>{useAncestorSearch('/orders/', keys) || '(empty)'}</output>
+      </>
+    );
+  }
+  const renderAt = (entry: string) =>
+    render(
+      <MemoryRouter initialEntries={[entry]}>
+        <RouteTreeProvider routes={routes}>
+          <Probe />
+        </RouteTreeProvider>
+      </MemoryRouter>,
+    );
+  it('takes only the list keys from the URL after a direct entry or reload', () => {
+    renderAt('/orders/42/edit?q=a%20b&tab=notes&page=2&pageSize=20&sort=name');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '?q=a+b&page=2&pageSize=20&sort=name',
+    );
+  });
+  it('is empty when the URL carries no list key', () => {
+    renderAt('/orders/42?tab=notes');
+    expect(screen.getByRole('status')).toHaveTextContent('(empty)');
+  });
+  it('prefers the query recorded when the list was visited', () => {
+    renderAt('/orders?page=3');
+    fireEvent.click(screen.getByRole('link', { name: 'Record' }));
+    expect(screen.getByRole('status')).toHaveTextContent('?page=3');
   });
 });

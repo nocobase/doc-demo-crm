@@ -1,3 +1,4 @@
+import { SettingsModulePage } from '../settings-module-page.js';
 import {
   usePageBreadcrumb,
   useApiClient,
@@ -7,19 +8,8 @@ import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { useTranslation } from '@nocobase/i18n/client';
 import type { LifecycleDescriptionView, RecordView } from '@nocobase/lifecycle';
 import { useRef, useState } from 'react';
-import {
-  Link,
-  Navigate,
-  Outlet,
-  useLocation,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from 'react-router';
-import {
-  WorkflowManagementLayout,
-  WorkflowDefinitionDetail,
-} from '#extensions/nocobase-workflow-management/layout';
+import { Link, Outlet, useParams, useSearchParams } from 'react-router';
+import { WorkflowDefinitionDetail } from '#extensions/nocobase-workflow-management/layout';
 import { WorkflowDefinitionList } from '#extensions/nocobase-workflow-management/definition-list';
 import { WorkflowExecutionList } from '#extensions/nocobase-workflow-management/execution-list';
 import { WorkflowExecutionDetail } from '#extensions/nocobase-workflow-management/execution-detail';
@@ -34,42 +24,16 @@ import { PendingButton } from '#components/pending-button';
 import { FeedbackForm } from '#components/feedback-form';
 import { useListData } from '#hooks/use-list-data';
 import { ReadError } from '../../customers/shared.js';
-const root = '/settings/quote-workflows';
+const root = '/settings/workflows';
 type Definition = {
   description: LifecycleDescriptionView;
   parameters: { revision: number; values: { thresholdPercent: number } };
 };
-export default function Workflows() {
-  const { t } = useTranslation();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const tab = location.pathname.includes('/executions')
-    ? 'executions'
-    : 'definitions';
-  usePageBreadcrumb([{ label: t('quoteApproval.workflows'), to: root }]);
-  if (location.pathname.replace(/\/$/, '') === root)
-    return <Navigate to={`${root}/definitions`} replace />;
-  return (
-    <WorkflowManagementLayout
-      title={t('quoteApproval.workflows')}
-      labels={{
-        definitions: t('quoteApproval.definitions'),
-        executions: t('quoteApproval.executions'),
-      }}
-      tab={tab}
-      onTabChange={(value) => {
-        void navigate(`${root}/${value}`);
-      }}
-    >
-      <Outlet />
-    </WorkflowManagementLayout>
-  );
-}
 export function Definitions() {
   const { t } = useTranslation();
   const request = useListData<{ data: Definition }>('crmWorkflows/definition');
   return (
-    <>
+    <SettingsModulePage>
       <WorkflowDefinitionList
         rows={[
           {
@@ -98,7 +62,7 @@ export function Definitions() {
         onRefresh={request.reload}
       />
       <Outlet />
-    </>
+    </SettingsModulePage>
   );
 }
 export function DefinitionDetail() {
@@ -110,7 +74,7 @@ export function DefinitionDetail() {
   });
   const inputRef = useRef<HTMLInputElement>(null);
   usePageBreadcrumb([
-    { label: t('quoteApproval.workflows'), to: `${root}/definitions` },
+    { label: t('settings.workflows.title'), to: `${root}/definitions` },
     { label: t('quoteApproval.title') },
   ]);
   if (request.error)
@@ -241,7 +205,7 @@ export function Executions() {
     meta: { total: number };
   }>(`crmWorkflows/executions?page=${page}&order=${order}`);
   return (
-    <>
+    <SettingsModulePage>
       <WorkflowExecutionList
         rows={(request.data?.data ?? []).map((r) => ({
           id: r.id,
@@ -281,7 +245,7 @@ export function Executions() {
         onNext={() => setSearch({ page: String(page + 1), order })}
       />
       <Outlet />
-    </>
+    </SettingsModulePage>
   );
 }
 export function ExecutionDetail() {

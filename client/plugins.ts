@@ -1,5 +1,8 @@
+import taskCenter from '@nocobase/app-plugin-task-center/client';
+import approval from '@nocobase/app-plugin-approval/client';
+import knowledge from '@nocobase/app-plugin-knowledge/client';
+import agents from '@nocobase/app-plugin-agents/client';
 import foundation from '@nocobase/app-plugin-foundation/client';
-import applicationManifest from '../package.json' with { type: 'json' };
 import defaultAccess from '@nocobase/app-plugin-authz-default-access/client';
 import sharingRules from '@nocobase/app-plugin-authz-sharing-rules/client';
 import restrictionRules from '@nocobase/app-plugin-authz-restriction-rules/client';
@@ -10,6 +13,9 @@ import {
 import apiKeys from '@nocobase/app-plugin-api-keys/client';
 import authentication from '@nocobase/app-plugin-authentication/client';
 import authorization from '@nocobase/app-plugin-authorization/client';
+import { pagePermissionTitles } from './pages/settings/page-permission-titles.js';
+import { permissionPageCatalog } from './pages/settings/permission-catalog.js';
+import { permissionWorkspaceSelection } from './pages/settings/permission-workspace.js';
 import databaseExplorer from '@nocobase/app-plugin-database-explorer/client';
 import users from '@nocobase/app-plugin-users/client';
 import notificationInApp from '@nocobase/app-plugin-notification-in-app/client';
@@ -18,16 +24,17 @@ import notification from '@nocobase/app-plugin-notification/client';
 import scheduler from '@nocobase/app-plugin-scheduler/client';
 import file from '@nocobase/app-plugin-file/client';
 import mail from '@nocobase/app-plugin-mail/client';
-import taskCenter from '@nocobase/app-plugin-task-center/client';
-import approval from '@nocobase/app-plugin-approval/client';
-import agents from '@nocobase/app-plugin-agents/client';
-import knowledge from '@nocobase/app-plugin-knowledge/client';
 
 // Array order is contribution order. A plugin is enabled by appearing in this
 // list; removing its entry and its import disables it.
 const clientPlugins: AppClientPlugins = defineClientPlugins([
   authentication(),
-  authorization(),
+  // The Roles and permissions pages list this application's pages and business objects.
+  authorization({
+    pageCatalog: permissionPageCatalog,
+    workspace: permissionWorkspaceSelection,
+    pageTitles: pagePermissionTitles,
+  }),
   defaultAccess(),
   sharingRules(),
   restrictionRules(),
@@ -39,17 +46,12 @@ const clientPlugins: AppClientPlugins = defineClientPlugins([
   notification(),
   file(),
   scheduler(),
-  mail(),
-  // The manifest is what the capability guide lists: every plugin this application declares.
-  foundation({
-    settingsGroup: true,
-    manifest: applicationManifest,
-    guideSettingsPath: '/settings',
-    navigation: false,
-  }),
+  mail({ workspaceRoutes: false }),
+  // The Agent panel and ✦ in the header, the conversation page, System settings › AI and Personal settings › Agent.
+  agents(),
+  foundation(),
   taskCenter(),
   approval(),
-  agents(),
   knowledge({ routes: false }),
 ]);
 

@@ -120,6 +120,7 @@ const enUS = {
       'Accepted means the provider accepted the message, not recipient delivery. Check unknown results before sending again.',
   },
   crmNotifications: {
+    title: 'CRM notification history',
     followUpDue: 'Customer follow-up due',
     quoteDue: 'Quotation response due',
     logs: 'Delivery logs',

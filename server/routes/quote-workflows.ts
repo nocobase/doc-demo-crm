@@ -24,6 +24,7 @@ import {
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { quoteApprovalServiceToken } from '../providers/quote-approvals.js';
+import { configurationGroup } from '@nocobase/lifecycle';
 import { quoteApprovalParameters } from '../lifecycles/quote-approval.js';
 export default defineApiRoutes(async (app: Application) => {
   const router = new Hono<AuthEnv & AuthorizationEnv>();
@@ -89,7 +90,10 @@ export default defineApiRoutes(async (app: Application) => {
             'crmQuoteApprovals',
             { record: null, transactionHandle: undefined },
           ),
-          parameters: (await service.parameters.read('crm', 'discount')) ?? {
+          parameters: (await service.parameters.readConfiguration(
+            'crm',
+            'crmQuoteApprovals',
+          )) ?? {
             revision: 0,
             values: { thresholdPercent: 10 },
           },
@@ -111,7 +115,9 @@ export default defineApiRoutes(async (app: Application) => {
       const input = c.req.valid('json');
       const data = await service.parameters.save({
         scope: 'crm',
-        group: quoteApprovalParameters,
+        group: configurationGroup('crmQuoteApprovals', [
+          quoteApprovalParameters,
+        ]),
         values: { thresholdPercent: input.thresholdPercent },
         expectedRevision: input.expectedRevision,
         requestId: input.requestId,
@@ -165,7 +171,10 @@ export default defineApiRoutes(async (app: Application) => {
     async (c) =>
       c.json({
         data: await service.runtime.view(
-          'crmQuoteApprovals',
+          await service.runtime.boundLifecycle(
+            'crmQuoteApprovals',
+            c.req.valid('param').id,
+          ),
           c.req.valid('param').id,
           { id: c.get('auth')!.user.id },
         ),
