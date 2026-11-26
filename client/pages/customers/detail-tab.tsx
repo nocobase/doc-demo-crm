@@ -1,6 +1,7 @@
 import CustomerReminders from '../reminders/customer.js';
 import CustomerMail from '../mail/customer.js';
 import { CustomerAttachments } from '../documents/files.js';
+import { CustomerAssistant } from './assistant.js';
 import { resolveListState } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useState } from 'react';
@@ -79,6 +80,13 @@ export default function CustomerTab() {
         />
       ) : tab === 'attachments' ? (
         <CustomerAttachments customerId={customer.id} revision={revision} />
+      ) : tab === 'assistant' ? (
+        <CustomerAssistant
+          key={customer.id}
+          customerId={customer.id}
+          revision={revision}
+          reload={context.reload}
+        />
       ) : tab === 'opportunities' ? (
         <SalesRelated
           customerId={customer.id}

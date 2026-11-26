@@ -7,6 +7,42 @@ import type { LocaleResource } from '@nocobase/i18n';
 import systemEnUS from './system/en-US.js';
 
 const enUS = {
+  crmAssistant: {
+    models: 'AI models',
+    knowledge: 'Product knowledge',
+    tab: 'Sales assistant',
+    title: 'Sales follow-up assistant',
+    description:
+      'Generate a customer summary, suggested next step, and editable follow-up draft using your authorized customer records and product knowledge.',
+    model: 'Chat model',
+    goal: 'Focus for this follow-up (optional)',
+    goalPlaceholder:
+      'e.g. Summarize recent progress and address implementation timeline and discount approval policy.',
+    generate: 'Generate follow-up draft',
+    generating: 'Generating…',
+    readOnlyBoundary:
+      'Read-only tools only. Nothing is emailed or saved until you review and click Save as follow-up.',
+    noModelTitle: 'No enabled chat model',
+    noModelDescription:
+      'Ask an administrator to configure and enable a chat model under System settings → AI models.',
+    generateFailed: 'Unable to generate a follow-up draft. Please try again.',
+    briefTitle: 'Summary and sources',
+    generatedBy: 'Generated with {{model}}',
+    summary: 'Customer summary',
+    suggestedNextStep: 'Suggested next step',
+    citations: 'Product knowledge sources',
+    noCitations:
+      'No product knowledge documents matched this request. Treat product details as unverified.',
+    missingEvidence: 'Missing evidence',
+    draftTitle: 'Editable follow-up draft',
+    draftHint:
+      'Review and edit the draft before saving it to the customer follow-up log.',
+    readOnlySaveNotice:
+      'Read-only shared access: you can review generated drafts, but cannot save follow-up records.',
+    saveDraft: 'Save as follow-up',
+    draftSaved: 'Follow-up saved from reviewed draft.',
+    viewFollowUps: 'View follow-ups',
+  },
   // The template's own copy: the shell, the sign-in pages, shared components and the homepage. Keep it in
   // `./system/` so a template upgrade can replace it without touching the application's copy below.
   ...systemEnUS,

@@ -1,4 +1,6 @@
-import { Mail } from 'lucide-react';
+import { Mail, BookOpen, Sparkles } from 'lucide-react';
+import { modelsRoute } from '@nocobase/app-plugin-agents/client/routes';
+import { knowledgeDefinition } from '@nocobase/app-plugin-knowledge/client/routes';
 import crmNotificationRoutes from './pages/settings/crm-notifications/routes.js';
 import databaseExplorerRoutes from './pages/settings/database-explorer/routes.js';
 import { createAppClientConfig } from '@nocobase/app-client';
@@ -21,6 +23,11 @@ import {
 } from '@nocobase/app-client/plugins';
 
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
+  {
+    ...modelsRoute,
+    parent: 'settingsAi',
+    navigation: { title: 'crmAssistant.models', icon: Sparkles },
+  },
   {
     // Every signed-in user reaches the landing page. `authz: 'skip'` takes it out of page authorization entirely, so
     // no permission change can leave a user signed in with nowhere to land.
@@ -209,6 +216,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
               'attachments',
               'mail',
               'reminders',
+              'assistant',
             ] as const
           ).map((tab): AppClientRouteDefinition => ({
             name: `customers-tab-${tab}`,
@@ -395,6 +403,13 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         componentLoader: () => import('./pages/sales/edit.js'),
       },
     ],
+  },
+  {
+    ...knowledgeDefinition({
+      path: '/product-knowledge',
+      space: { scope: 'crm-products', scopeId: '' },
+    }),
+    navigation: { title: 'crmAssistant.knowledge', icon: BookOpen },
   },
   {
     // Declares no navigation, so the application decides where its entry goes (for example a sidebar item with an

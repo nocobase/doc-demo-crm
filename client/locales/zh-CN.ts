@@ -6,6 +6,39 @@ import type { AppResource } from './en-US.js';
 import systemZhCN from './system/zh-CN.js';
 
 const zhCN: AppResource = {
+  crmAssistant: {
+    models: 'AI 模型',
+    knowledge: '产品知识',
+    tab: '销售助手',
+    title: '销售跟进助手',
+    description:
+      '基于当前有权查看的客户记录与产品知识库，生成客户摘要、下一步建议与可编辑跟进草稿。',
+    model: '对话模型',
+    goal: '本次跟进重点（可选）',
+    goalPlaceholder: '例如：总结最近沟通进展，说明实施周期和折扣审批政策。',
+    generate: '生成跟进草稿',
+    generating: '正在生成…',
+    readOnlyBoundary:
+      '仅调用只读工具。在你核对并点击“保存为跟进记录”前，不会发送邮件或写入业务数据。',
+    noModelTitle: '尚未启用对话模型',
+    noModelDescription:
+      '请管理员在“系统设置 → AI 模型”中配置并启用可用的对话模型。',
+    generateFailed: '生成跟进草稿失败，请重试。',
+    briefTitle: '摘要与资料依据',
+    generatedBy: '由 {{model}} 生成',
+    summary: '客户摘要',
+    suggestedNextStep: '建议下一步',
+    citations: '引用的产品知识',
+    noCitations: '未检索到匹配的产品知识文档，请勿向客户承诺未经核实的内容。',
+    missingEvidence: '缺少资料依据',
+    draftTitle: '可编辑跟进草稿',
+    draftHint: '请先人工核对并按需修改，再保存到客户跟进记录。',
+    readOnlySaveNotice:
+      '当前为只读共享访问：你可以查看生成的草稿，但不能保存跟进记录。',
+    saveDraft: '保存为跟进记录',
+    draftSaved: '已将核对后的草稿保存为跟进记录。',
+    viewFollowUps: '查看跟进记录',
+  },
   // The template's own copy; see `./en-US.ts`.
   ...systemZhCN,
   ...fileUi,

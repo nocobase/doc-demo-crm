@@ -12,6 +12,8 @@ export const pagePermissionTitles: PagePermissionTitles = {
   'customers-tab-attachments': 'documents.attachments',
   'customers-tab-attachments-edit': 'crm.editCustomer',
   'customers-tab-attachments-add': 'documents.add',
+  'customers-tab-assistant': 'crmAssistant.tab',
+  'customers-tab-assistant-edit': 'crm.editCustomer',
   'sales-quote-submit': 'quoteApproval.submit',
   'crm-task-quote-edit': 'sales.editQuote',
   'crm-task-quote-submit': 'quoteApproval.submit',

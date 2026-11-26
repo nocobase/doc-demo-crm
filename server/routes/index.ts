@@ -1,3 +1,4 @@
+import crmAssistant from './crm-assistant.js';
 import crmReminders from './crm-reminders.js';
 import crmMail from './crm-mail.js';
 import crmNotifications from './crm-notifications.js';
@@ -12,6 +13,7 @@ import type { Application } from '@nocobase/app-server/application';
 import type { AppRouteContribution } from '@nocobase/app-server/router';
 
 const routes: readonly AppRouteContribution<Application>[] = [
+  crmAssistant,
   crmMail,
   crmReminders,
   workspaceRoutes,

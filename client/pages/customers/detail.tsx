@@ -59,6 +59,7 @@ export default function CustomerDetail() {
     { value: 'reminders', label: t('reminders.title') },
     { value: 'mail', label: t('crmMail.title') },
     { value: 'attachments', label: t('documents.attachments') },
+    { value: 'assistant', label: t('crmAssistant.tab') },
   ];
   const segment = location.pathname.slice(ownPath.length + 1).split('/')[0];
   const current = tabs.find((tab) => tab.value === segment)?.value;

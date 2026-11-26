@@ -20,6 +20,8 @@ import file from '@nocobase/app-plugin-file/client';
 import mail from '@nocobase/app-plugin-mail/client';
 import taskCenter from '@nocobase/app-plugin-task-center/client';
 import approval from '@nocobase/app-plugin-approval/client';
+import agents from '@nocobase/app-plugin-agents/client';
+import knowledge from '@nocobase/app-plugin-knowledge/client';
 
 // Array order is contribution order. A plugin is enabled by appearing in this
 // list; removing its entry and its import disables it.
@@ -47,6 +49,8 @@ const clientPlugins: AppClientPlugins = defineClientPlugins([
   }),
   taskCenter(),
   approval(),
+  agents(),
+  knowledge({ routes: false }),
 ]);
 
 export default clientPlugins;

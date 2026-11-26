@@ -1,3 +1,4 @@
+import CrmAssistantProvider from './crm-assistant.js';
 import CrmRemindersProvider from './crm-reminders.js';
 import CrmNotificationsProvider from './crm-notifications.js';
 import QuoteApprovalsProvider from './quote-approvals.js';
@@ -13,6 +14,7 @@ const serviceProviders: readonly ApplicationServiceProviderConstructor[] = [
   CrmNotificationsProvider,
   QuoteApprovalsProvider,
   CrmRemindersProvider,
+  CrmAssistantProvider,
 ];
 
 export default serviceProviders;
