@@ -25,6 +25,7 @@ database/*/seeds/
 # `.agents/rules/` is the application's own guidance and is formatted like any other document.
 .agents/*
 !.agents/rules/
+!.agents/local-skills/
 .claude/skills/
 
 # Internal packages run their own formatting through check:packages.

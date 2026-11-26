@@ -17,6 +17,7 @@ coverage/
 /database/*/collections/
 /.agents/*
 !/.agents/rules/
+!/.agents/local-skills/
 /.claude/skills/
 /.agent-annotations/
 *.log

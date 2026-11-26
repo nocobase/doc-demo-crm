@@ -24,6 +24,8 @@ This file stays at most 32 KB and must not grow without bound, because every age
 
 ## Load the development skills
 
+Before changing application code or handling commits, Tags, branches, pushes, or tutorial alignment, read the project-owned [tutorial Git history Skill](.agents/local-skills/tutorial-git-history/SKILL.md). It makes `../website-v3` the source of truth for this repository's ordered lesson history. Project-owned Skills live in `.agents/local-skills/`, are committed, and must be preserved during upgrades; `.agents/skills/` remains package-synchronized output.
+
 For creating or maintaining a plugin in this App, read [the project plugin development Skill](.agents/skills/nocobase-app-plugin-development/SKILL.md). It ships with `@nocobase/app-skills`; do not install a global copy. If an older global Skill has the same name, read this project's file by path and follow the upgrade Skill's migration guidance to retire the global copy after verifying the replacement.
 
 `pnpm install` runs `pnpm nocobase skills sync` through the application's `postinstall` hook. If `.agents/skills/nocobase-app-development/` is missing, install dependencies from the application root; if install scripts were disabled or synchronized Skills are stale, run `pnpm nocobase skills sync` explicitly.
