@@ -1,3 +1,5 @@
+import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { crmOperations } from '../../../server/crm-operations.js';
 import { usePageBreadcrumb } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useState } from 'react';
@@ -17,6 +19,7 @@ export default function OpportunityDetail() {
   const { t } = useTranslation();
   const { customerId, opportunityId } = useParams();
   const access = useCustomerOperation(customerId, 'editOpportunity');
+  const quotes = useCan(crmOperations.viewQuotes);
   const owner = useOutletContext<SalesContext>();
   const request = useListData<{ data: Opportunity }>(
     `crmSales/customers/${customerId}/opportunities/${opportunityId}`,
@@ -62,11 +65,13 @@ export default function OpportunityDetail() {
                 </p>
               </CardContent>
             </Card>
-            <SalesRelated
-              customerId={customerId!}
-              opportunityId={opportunityId}
-              revision={revision}
-            />
+            {quotes.can && (
+              <SalesRelated
+                customerId={customerId!}
+                opportunityId={opportunityId}
+                revision={revision}
+              />
+            )}
           </>
         )}
         <Outlet context={{ opportunity, reload }} />

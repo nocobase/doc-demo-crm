@@ -2,7 +2,7 @@ import { answerApi } from '@nocobase/app-testing/client';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vitest';
-import { renderSettingsClient } from '../helpers/settings-client.js';
+import { renderCrmClient } from '../helpers/crm-client.js';
 import WorkspacePage from '../../client/pages/sales-workspace/index.js';
 import enUS from '../../client/locales/en-US.js';
 import zhCN from '../../client/locales/zh-CN.js';
@@ -41,7 +41,7 @@ const data = {
   ],
 };
 function mount(fetch: typeof globalThis.fetch, locale = 'en-US') {
-  return renderSettingsClient(<WorkspacePage />, {
+  return renderCrmClient(<WorkspacePage />, {
     fetch,
     route: '/sales',
     locale,

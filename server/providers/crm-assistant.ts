@@ -13,7 +13,7 @@ import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/to
 import { ApiError } from '@nocobase/app-server/router';
 import { CrmService } from './crm.js';
 import { SalesService } from './sales.js';
-import { authorizeCrm } from './crm-permissions.js';
+import { authorizeCrm, summaryReads } from './crm-permissions.js';
 
 const selection = z.object({ customerId: z.uuid() });
 const json = z.json();
@@ -210,11 +210,15 @@ export default class CrmAssistantProvider extends ServiceProvider<Application> {
       const connection = this.app.container
         .resolve(databaseManagerToken)
         .connection();
-      const policies = await authorizeCrm(authorization, 'view');
+      await new CrmService(
+        connection,
+        await authorizeCrm(authorization, 'useAssistant'),
+      ).get(customerId);
+      const policies = await summaryReads(authorization, true);
       const crm = new CrmService(connection, policies);
       const sales = new SalesService(connection, policies);
       const customer = await crm.get(customerId);
-      return { crm, sales, customerId, customer };
+      return { crm, sales, customerId, customer, policies };
     };
 
     online.configurator.registerTool('crm_customer_context', {
@@ -224,16 +228,26 @@ export default class CrmAssistantProvider extends ServiceProvider<Application> {
           'Read the selected customer, contacts, latest follow-ups, and opportunities with quotes. States whether more history exists.',
         inputSchema: z.strictObject({}),
         execute: async (_input, { context }) => {
-          const { crm, sales, customerId, customer } = await current(context);
+          const { crm, sales, customerId, customer, policies } =
+            await current(context);
+          const empty = { data: [], meta: { total: 0 } };
           const [contacts, followUps, opportunities] = await Promise.all([
-            crm.related(customerId, 'contacts', 1),
-            crm.related(customerId, 'followUps', 1),
-            sales.opportunities(customerId, 1),
+            policies.crmContacts
+              ? crm.related(customerId, 'contacts', 1)
+              : empty,
+            policies.crmFollowUps
+              ? crm.related(customerId, 'followUps', 1)
+              : empty,
+            policies.crmOpportunities
+              ? sales.opportunities(customerId, 1)
+              : empty,
           ]);
           const oppsWithQuotes = await Promise.all(
             opportunities.data.slice(0, 5).map(async (opp) => {
               const oppId = z.string().parse(opp.id);
-              const quotes = await sales.quotes(customerId, oppId, 1);
+              const quotes = policies.crmQuotes
+                ? await sales.quotes(customerId, oppId, 1)
+                : empty;
               return {
                 ...opp,
                 quotes: quotes.data.slice(0, 5),

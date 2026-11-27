@@ -1,6 +1,6 @@
 # Lesson 8 · Quote approvals and tasks
 
-Continue from `lesson-7`. This stage adds an immutable quotation approval snapshot, native Approval/Task Center integration and authorized workflow settings. Existing CRM records and role assignments remain intact.
+On the complete CRM example, start with a saved draft under a customer you own. For an upgrade from `lesson-7`, this stage adds an immutable quotation approval snapshot, native Approval/Task Center integration and authorized workflow settings. Existing CRM records and role assignments remain intact.
 
 ## Installation and upgrade
 
@@ -21,7 +21,7 @@ Migration `202611150001_quote_approvals` is deliberately forward-only. Removing 
 
 Assign Sales and Sales manager roles to named test accounts through existing Users settings. No wildcard assignment is added. Create a customer owned by the salesperson, an opportunity, a product and a quotation. A line discount strictly above10% requires an active selected manager other than the applicant. At or below10%, submission confirms without a review task.
 
-Submit from the quotation dialog. As the selected manager, open My tasks and the quotation. Approve, reject with a reason or return with a reason. Return permits editing and resubmission, with retained history and a fresh task. Withdrawal cancels the current task and restores Draft. Confirmed and rejected quotations are final; create another for a new proposal.
+Submit from the quotation dialog. As the selected manager, open My tasks and the quotation. Approve, reject with a reason or return with a reason. Return permits editing and resubmission, with retained history and a fresh task. Withdrawal cancels the current task and restores Draft. Confirmed and rejected quotations are final; create another for a new proposal. After approval, reopen the quote as the salesperson. Check the decision, the Confirmed state and the absence of Edit quote. This completes the approval exercise.
 
 Every action requires current customer scope. A manager must also retain the quotation operation permission; manager membership alone is insufficient. Unrelated users and read-only shares cannot decide. A removed reviewer cannot act. The applicant or another currently authorized manager may withdraw for recovery. After ownership transfer, the former applicant loses access and the new owner creates a new quotation rather than impersonating them.
 

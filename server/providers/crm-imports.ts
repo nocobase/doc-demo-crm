@@ -2,10 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Application } from '@nocobase/app-server/application';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import { ApiError } from '@nocobase/app-server/router';
-import {
-  authorizationToken,
-  type AuthorizationContext,
-} from '@nocobase/app-plugin-authorization/server';
+import { authorizationToken } from '@nocobase/app-plugin-authorization/server';
 import {
   UserManagementError,
   userManagementServiceToken,
@@ -39,7 +36,12 @@ import {
   type ConflictModeValue,
   type IntakePolicies,
 } from './crm-intake.js';
-import { authorizeCrm, type CrmPolicies } from './crm-permissions.js';
+import {
+  authorizeCrm,
+  optionalCrm,
+  scopedRepository,
+  type CrmPolicies,
+} from './crm-permissions.js';
 
 export const MAX_IMPORT_ROWS = 500;
 export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
@@ -176,19 +178,6 @@ function formatError(row: RepositoryRecord) {
   });
 }
 
-export async function optionalPolicies(
-  context: AuthorizationContext,
-  action: string,
-): Promise<CrmPolicies | undefined> {
-  const decision = await context.authorize({
-    resource: { type: 'composite', id: 'crm.records' },
-    action,
-  });
-  if (decision.effect === 'deny' || !decision.conditions?.database)
-    return undefined;
-  return decision.conditions.database;
-}
-
 export class CrmImportsService {
   private executor: JobExecutor | undefined;
   private JobClass: ReturnType<typeof createCrmImportJob> | undefined;
@@ -214,6 +203,7 @@ export class CrmImportsService {
   }
 
   async createBatchRecord(
+    policies: CrmPolicies,
     tx: DatabaseConnection,
     actor: { readonly id: string; readonly name: string },
     input: z.infer<typeof CreateImportBatchInput>,
@@ -269,7 +259,7 @@ export class CrmImportsService {
 
     const now = new Date().toISOString();
     const record = (
-      await tx.repository('crmImportBatches').createOne({
+      await scopedRepository(tx, policies, 'crmImportBatches').createOne({
         values: {
           id: batchId,
           fileName: input.fileName,
@@ -321,21 +311,28 @@ export class CrmImportsService {
     return formatBatch(updated);
   }
 
-  async listBatches(actorId: string, canViewAll: boolean) {
-    const repo = this.connection().repository('crmImportBatches');
-    const filter = canViewAll ? undefined : { uploadedBy: actorId };
+  async listBatches(policies: CrmPolicies) {
+    const repo = scopedRepository(
+      this.connection(),
+      policies,
+      'crmImportBatches',
+    );
+
     const rows = await repo.findMany({
-      ...(filter ? { filter } : {}),
       limit: 50,
       sort: (s) => [s.field('createdAt').desc(), s.field('id').desc()],
     });
     return rows.map(formatBatch);
   }
 
-  async getBatch(actorId: string, canViewAll: boolean, batchId: string) {
-    const repo = this.connection().repository('crmImportBatches');
+  async getBatch(policies: CrmPolicies, batchId: string) {
+    const repo = scopedRepository(
+      this.connection(),
+      policies,
+      'crmImportBatches',
+    );
     const row = await repo.findOne({ filter: { id: batchId } });
-    if (!row || (!canViewAll && asString(row.uploadedBy) !== actorId)) {
+    if (!row) {
       throw new ApiError({
         status: 'NOT_FOUND',
         reason: 'IMPORT_BATCH_NOT_FOUND',
@@ -356,8 +353,8 @@ export class CrmImportsService {
     };
   }
 
-  async errorsCsv(actorId: string, canViewAll: boolean, batchId: string) {
-    const batch = await this.getBatch(actorId, canViewAll, batchId);
+  async errorsCsv(policies: CrmPolicies, batchId: string) {
+    const batch = await this.getBatch(policies, batchId);
     const headers = [...IMPORT_CSV_HEADERS, 'errorCode', 'errorMessage'];
     const lines = [headers.join(',')];
     for (const err of batch.errors) {
@@ -454,13 +451,25 @@ export class CrmImportsService {
 
     let policies: IntakePolicies;
     try {
-      const view = await authorizeCrm(authzContext, 'view');
+      const batchPolicy = await authorizeCrm(authzContext, 'importCustomers');
+      if (
+        !(await scopedRepository(
+          connection,
+          batchPolicy,
+          'crmImportBatches',
+        ).findOne({ filter: { id: batchId } }))
+      )
+        throw new Error('Batch access denied');
+      const view = {
+        ...(await authorizeCrm(authzContext, 'viewCustomer')),
+        ...(await optionalCrm(authzContext, 'viewContacts')),
+      };
       policies = {
         view,
-        createCustomer: await optionalPolicies(authzContext, 'createCustomer'),
-        editCustomer: await optionalPolicies(authzContext, 'editCustomer'),
-        addContact: await optionalPolicies(authzContext, 'addContact'),
-        editContact: await optionalPolicies(authzContext, 'editContact'),
+        createCustomer: await optionalCrm(authzContext, 'createCustomer'),
+        editCustomer: await optionalCrm(authzContext, 'editCustomer'),
+        addContact: await optionalCrm(authzContext, 'addContact'),
+        editContact: await optionalCrm(authzContext, 'editContact'),
       };
     } catch {
       await this.markFailed(

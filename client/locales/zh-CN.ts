@@ -6,6 +6,15 @@ import type { AppResource } from './en-US.js';
 import systemZhCN from './system/zh-CN.js';
 
 const zhCN: AppResource = {
+  dailyReports: {
+    title: '销售活动日报',
+    description: '最近 30 个有日报的日期 · {{timezone}}',
+    date: '日报日期',
+    customers: '新增客户',
+    opportunities: '新增商机',
+    followUps: '新增跟进',
+    empty: '定时任务执行后，这里会显示第一份日报。',
+  },
   crmAssistant: {
     models: 'AI 模型',
     knowledge: '产品知识',
@@ -166,6 +175,9 @@ const zhCN: AppResource = {
     failed: '操作失败，请检查访问权限后重试。',
     uploadHint:
       '每次最多上传 10 个文件，每个不超过 5 MB。保存后关联到客户；取消后文件保持私有，等待管理员清理。',
+    draftQuotation: '草稿报价预览',
+    downloadDraft: '下载草稿 DOCX',
+    draftHint: '预览使用最近一次保存的数量、单价和折扣。',
     quotation: '正式报价文件',
     generate: '生成 DOCX',
     confirmFirst: '请先确认报价，再生成正式文件。',
@@ -176,7 +188,7 @@ const zhCN: AppResource = {
     templateDescription:
       '固定英文 DOCX · 第 {{revision}} 版。模板变更随应用版本发布。',
     storageDescription:
-      '私有本地存储 · 每个附件 {{size}} MB · 每次 {{count}} 个。每次下载都会检查当前客户权限。',
+      '存储磁盘：{{disk}} · 每个附件 {{size}} MB · 每次 {{count}} 个。每次下载都会检查当前客户权限。',
     cleanup: '未关联上传清理',
     cleanupHint:
       '仅列出超过 {{hours}} 小时的未关联上传。清理将永久删除文件内容；已关联附件和正式报价文件不在此列。',
@@ -236,6 +248,29 @@ const zhCN: AppResource = {
     open: '打开报价',
   },
   crmAccess: {
+    submitted: '我提交的批次',
+    viewImportsDescription: '查看导入批次及其错误报告。',
+    create: '新建',
+    edit: '编辑',
+    attachFileDescription: '为所选客户添加附件。',
+    removeFileDescription: '移除所选客户的附件。',
+    scheduleReminderDescription: '安排客户提醒。',
+    completeReminderDescription: '将客户提醒标记为完成。',
+    cancelReminderDescription: '取消客户提醒。',
+    importCustomersDescription: '提交客户导入并查看自己的批次。',
+    useAssistantDescription: '根据有权读取的客户历史生成跟进草稿。',
+    submitQuoteDescription: '提交报价审批。',
+    withdrawQuoteDescription: '撤回待审批的报价。',
+    approveQuoteDescription: '通过分配给自己的报价审批任务。',
+    rejectQuoteDescription: '拒绝分配给自己的报价审批任务。',
+    returnQuoteDescription: '将分配给自己的报价退回修改。',
+    issueQuoteDescription: '根据已确认的报价生成正式单据。',
+    viewCustomerDescription: '查看所选范围内的客户。',
+    viewContactsDescription: '查看所选范围内的联系人。',
+    viewFollowUpsDescription: '查看所选范围内的跟进。',
+    viewOpportunitiesDescription: '查看所选范围内的商机。',
+    viewQuotesDescription: '查看所选范围内的报价及其明细。',
+
     records: '客户业务记录',
     view: '查看',
     owned: '我负责的客户',

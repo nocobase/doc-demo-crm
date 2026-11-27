@@ -1,3 +1,4 @@
+import { SalesService } from '../providers/sales.js';
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -23,6 +24,7 @@ import {
 } from '@nocobase/app-server/router';
 import {
   authorizeCrm,
+  customerReads,
   scopedRepository,
 } from '../providers/crm-permissions.js';
 import { CrmService } from '../providers/crm.js';
@@ -72,7 +74,7 @@ export default defineApiRoutes((app: Application) => {
       const customerId = c.req.valid('param').customerId;
       await new CrmService(
         connection,
-        await authorizeCrm(c.get('authz'), 'view'),
+        await authorizeCrm(c.get('authz'), 'viewCustomer'),
       ).get(customerId);
       const page = c.req.valid('query').page;
       const repo = connection.repository('crmReminders');
@@ -95,7 +97,7 @@ export default defineApiRoutes((app: Application) => {
     apiValidator('param', params),
     async (c) => {
       const customerId = c.req.valid('param').customerId;
-      const policies = await authorizeCrm(c.get('authz'), 'view');
+      const policies = await customerReads(c.get('authz'), 'viewQuotes');
       await new CrmService(connection, policies).get(customerId);
       const quotes = await scopedRepository(
         connection,
@@ -104,6 +106,14 @@ export default defineApiRoutes((app: Application) => {
       ).findMany({ filter: { customerId }, limit: 100 });
       const data = [];
       for (const quote of quotes) {
+        const opportunity = await scopedRepository(
+          connection,
+          policies,
+          'crmOpportunities',
+        ).findOne({
+          filter: { id: z.string().parse(quote.opportunityId), customerId },
+        });
+        if (!opportunity) continue;
         const approval = await connection
           .repository('crmQuoteApprovals')
           .findOne({
@@ -126,7 +136,10 @@ export default defineApiRoutes((app: Application) => {
     async (c) => {
       const { customerId } = c.req.valid('param');
       const values = c.req.valid('json');
-      const policies = await authorizeCrm(c.get('authz'), 'editCustomer');
+      const policies = await authorizeCrm(c.get('authz'), 'scheduleReminder');
+      const quotePolicies = values.quoteId
+        ? await customerReads(c.get('authz'), 'viewQuotes')
+        : undefined;
       const actor = c.get('auth')!.user.id;
       const authorize = async () => {
         await new CrmService(connection, policies).get(customerId);
@@ -142,10 +155,12 @@ export default defineApiRoutes((app: Application) => {
         execute: async (tx) => {
           await new CrmService(tx, policies).get(customerId);
           let opportunityId = null;
-          if (values.quoteId) {
-            const quote = await tx
-              .repository('crmQuotes')
-              .findOne({ filter: { id: values.quoteId, customerId } });
+          if (values.quoteId && quotePolicies) {
+            const quote = await scopedRepository(
+              tx,
+              quotePolicies,
+              'crmQuotes',
+            ).findOne({ filter: { id: values.quoteId, customerId } });
             const approval = await tx.repository('crmQuoteApprovals').findOne({
               filter: { quoteId: values.quoteId, status: 'confirmed' },
             });
@@ -156,6 +171,10 @@ export default defineApiRoutes((app: Application) => {
                 domain: 'crm',
                 message: 'Select a confirmed quotation from this customer.',
               });
+            await new SalesService(tx, quotePolicies).opportunity(
+              customerId,
+              z.string().parse(quote.opportunityId),
+            );
             opportunityId = quote.opportunityId;
           }
           const now = new Date().toISOString();
@@ -190,7 +209,10 @@ export default defineApiRoutes((app: Application) => {
     apiValidator('header', header),
     async (c) => {
       const values = c.req.valid('param');
-      const policies = await authorizeCrm(c.get('authz'), 'editCustomer');
+      const policies = await authorizeCrm(
+        c.get('authz'),
+        values.action === 'complete' ? 'completeReminder' : 'cancelReminder',
+      );
       const authorize = async () => {
         await new CrmService(connection, policies).get(values.customerId);
       };

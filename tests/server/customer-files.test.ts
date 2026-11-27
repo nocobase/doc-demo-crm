@@ -1,19 +1,32 @@
 import { driveManagerToken } from '@nocobase/app-server/drive';
 import { randomUUID } from 'node:crypto';
+import { mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   DEFAULT_ADMIN_CREDENTIALS,
   signIn,
 } from '@nocobase/app-plugin-authentication/testing';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import { createAppTest } from '@nocobase/app-testing/server';
-import { expect, vi } from 'vitest';
+import { afterAll, expect, vi } from 'vitest';
+import { documentXml } from '../helpers/docx.js';
 import * as renderer from '../../server/providers/quotation-renderer.js';
 import { CustomerFilesService } from '../../server/providers/customer-files.js';
 import { createStandaloneServer } from '../../server/standalone.js';
+const storage = mkdtempSync(join(tmpdir(), 'crm-files-'));
+afterAll(() => rm(storage, { recursive: true, force: true }));
 const test = createAppTest({
   createServer: createStandaloneServer,
   connections: ['main'],
   config: {
+    drive: {
+      default: 'attachments',
+      disks: {
+        attachments: { driver: 'fs', location: storage, visibility: 'private' },
+      },
+    },
     app: { publicOrigin: 'http://localhost' },
     auth: {
       secret: 'crm-file-test-secret-at-least-32-characters',
@@ -64,6 +77,10 @@ test('uploads private files, attaches with customer scope and issues one frozen 
   const m = await person('Morgan', 'crm-sales-manager');
   const other = await person('Taylor', 'crm-sales');
   const admin = await signIn(testApp, DEFAULT_ADMIN_CREDENTIALS);
+  const checked = await data(
+    await admin.fetch('/file/disks/attachments/check', write({})),
+  );
+  expect(checked.ok).toBe(true);
   const customer = await data(
     await a.session.fetch(
       '/crm/customers',
@@ -87,6 +104,20 @@ test('uploads private files, attaches with customer scope and issues one frozen 
   );
   const file = uploaded.record;
   expect(file.filename).toBe('requirements.txt');
+  const files = connection.repository('crmFiles');
+  const stored = await files.findOne({ filter: { id: file.id } });
+  expect(stored?.disk).toBe('attachments');
+  const drive = testApp.application.container.resolve(driveManagerToken);
+  const legacyId = randomUUID();
+  const legacyKey = `objects/${legacyId}.txt`;
+  await drive.use('local').put(legacyKey, 'Earlier local attachment');
+  await files.createOne({
+    values: { ...stored, id: legacyId, disk: 'local', key: legacyKey },
+  });
+  const legacyUrl = `http://localhost${file.contentUrl.replace(file.id, legacyId)}`;
+  expect(await (await a.session.fetch(legacyUrl)).text()).toBe(
+    'Earlier local attachment',
+  );
   const url = `http://localhost${file.contentUrl}`;
   expect(await (await a.session.fetch(url)).text()).toBe(
     'Requirements & Unicode 中文',
@@ -145,17 +176,94 @@ test('uploads private files, attaches with customer scope and issues one frozen 
     await a.session.fetch(
       `/crmSales/customers/${customer.id}/opportunities/${opp.id}/quotes`,
       write({
-        name: 'Approved version',
-        lines: [{ productId: product.id, quantity: 2, discount: 10 }],
+        name: 'Rollout proposal',
+        lines: [{ productId: product.id, quantity: 2, discount: 15 }],
       }),
     ),
   );
   const docPath = `/crmFiles/quotes/${customer.id}/${opp.id}/${quote.id}`;
+  const draftPath = `${docPath}/draft`;
+  const approvalPath = `/crmApprovals/quotes/${customer.id}/${opp.id}/${quote.id}`;
+  const quotePath = `/crmSales/customers/${customer.id}/opportunities/${opp.id}/quotes/${quote.id}`;
+  const approvalRows = connection.repository('crmQuoteApprovals');
+  const draftFiles = await files.count();
+  expect((await request(draftPath)).status).toBe(401);
+  expect((await other.session.fetch(draftPath)).status).toBe(404);
   expect((await a.session.fetch(docPath, write({}))).status).toBe(400);
+  async function preview(quantity: number, total: string) {
+    const response = await a.session.fetch(draftPath);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(response.headers.get('content-disposition')).toContain(
+      'draft-quotation-',
+    );
+    const xml = documentXml(Buffer.from(await response.arrayBuffer()));
+    for (const value of [
+      'DRAFT QUOTATION',
+      'Implementation &amp; support',
+      `>${quantity}<`,
+      '100.00',
+      '15%',
+      `Total: ${total} USD`,
+    ])
+      expect(xml).toContain(value);
+    expect(xml).not.toContain('Confirmed quotation');
+    expect(await approvalRows.count({ filter: { quoteId: quote.id } })).toBe(0);
+    expect(await files.count()).toBe(draftFiles);
+    expect(await connection.repository('crmQuoteDocuments').count()).toBe(0);
+    expect((await data(await a.session.fetch(approvalPath))).status).toBe(
+      'draft',
+    );
+  }
+  await preview(2, '170.00');
   await data(
     await a.session.fetch(
-      `/crmApprovals/quotes/${customer.id}/${opp.id}/${quote.id}/submit`,
-      write({ reviewerId: null }),
+      quotePath,
+      write(
+        {
+          name: quote.name,
+          lines: [
+            {
+              productId: product.id,
+              quantity: 3,
+              unitPrice: 100,
+              discount: 15,
+            },
+          ],
+        },
+        'PATCH',
+      ),
+    ),
+  );
+  await preview(3, '255.00');
+  await data(
+    await a.session.fetch(
+      `${approvalPath}/submit`,
+      write({ reviewerId: m.user.id }),
+    ),
+  );
+  expect((await a.session.fetch(draftPath)).status).toBe(400);
+  const review = await data(await m.session.fetch(approvalPath));
+  const [run] = review.runs;
+  await data(
+    await m.session.fetch(
+      `${approvalPath}/actions`,
+      write({
+        taskId: run.tasks[0].id,
+        action: 'approve',
+        contentHash: run.run.contentHash,
+      }),
+    ),
+  );
+  expect((await a.session.fetch(draftPath)).status).toBe(400);
+  // A catalog price change before issuance must not enter the confirmed snapshot.
+  await data(
+    await m.session.fetch(
+      `/crmSales/products/${product.id}`,
+      write(
+        { name: 'Repriced implementation', code: product.code, unitPrice: 125 },
+        'PATCH',
+      ),
     ),
   );
   const renderFailure = vi
@@ -177,6 +285,20 @@ test('uploads private files, attaches with customer scope and issues one frozen 
     await a.session.fetch(docPath, write({}, 'POST', key)),
   );
   expect(repeat.file.id).toBe(issued.file.id);
+  expect((await files.findOne({ filter: { id: issued.file.id } }))?.disk).toBe(
+    'attachments',
+  );
+  const issuedUrl = `http://localhost${issued.file.contentUrl}`;
+  const firstDownload = Buffer.from(
+    await (await a.session.fetch(issuedUrl)).arrayBuffer(),
+  );
+  const issuedXml = documentXml(firstDownload);
+  expect(issuedXml).toContain('Confirmed quotation');
+  expect(issuedXml).toContain('Implementation &amp; support');
+  expect(issuedXml).toContain('100.00');
+  expect(issuedXml).toContain('Total: 255.00 USD');
+  expect(issuedXml).not.toContain('DRAFT');
+  expect((await other.session.fetch(issuedUrl)).status).toBe(404);
   await data(
     await m.session.fetch(
       `/crmSales/products/${product.id}`,
@@ -193,8 +315,7 @@ test('uploads private files, attaches with customer scope and issues one frozen 
   );
   expect(doc.headers.get('content-type')).toContain('wordprocessingml');
   const bytes = new Uint8Array(await doc.arrayBuffer());
-  expect(bytes[0]).toBe(80);
-  expect(bytes[1]).toBe(75);
+  expect(Buffer.from(bytes)).toEqual(firstDownload);
   await data(
     await a.session.fetch(
       `/crm/customers/${customer.id}`,
@@ -246,7 +367,9 @@ test('uploads private files, attaches with customer scope and issues one frozen 
   ).toBe(200);
   expect((await request('/crmDocuments/settings')).status).toBe(401);
   expect((await a.session.fetch('/crmDocuments/settings')).status).toBe(403);
-  expect((await admin.fetch('/crmDocuments/settings')).status).toBe(200);
+  expect(
+    (await data(await admin.fetch('/crmDocuments/settings'))).storage.disk,
+  ).toBe('attachments');
   const orphanForm = new FormData();
   orphanForm.append(
     'file',
@@ -301,9 +424,7 @@ test('uploads private files, attaches with customer scope and issues one frozen 
     (await data(await admin.fetch('/crmDocuments/orphans?status=deleting')))
       .length,
   ).toBe(1);
-  const disk = testApp.application.container
-    .resolve(driveManagerToken)
-    .use('local');
+  const disk = drive.use('attachments');
   const failedDelete = vi
     .spyOn(disk, 'delete')
     .mockRejectedValueOnce(new Error('storage unavailable'));

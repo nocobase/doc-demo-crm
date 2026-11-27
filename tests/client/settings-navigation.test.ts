@@ -342,12 +342,12 @@ it('keeps workflow management out of the menu when both views are denied', () =>
     [
       '/settings/workflows/definitions',
       'required',
-      { resource: { type: 'composite', id: 'crm.workflow' }, action: 'read' },
+      { resource: { type: 'settings', id: 'crm.workflow' }, action: 'read' },
     ],
     [
       '/settings/workflows/executions',
       'required',
-      { resource: { type: 'composite', id: 'crm.workflow' }, action: 'read' },
+      { resource: { type: 'settings', id: 'crm.workflow' }, action: 'read' },
     ],
   ]);
   expect(catalog(routes)).toContainEqual(workflowCategory);

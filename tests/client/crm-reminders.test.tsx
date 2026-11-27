@@ -35,13 +35,23 @@ async function renderPage(edit: boolean) {
               unrestricted: false,
               permissions: [
                 {
-                  resource: { type: 'composite', id: 'crm.records' },
-                  actions: ['editCustomer'],
+                  resource: { type: 'composite', id: 'crm.customers' },
+                  actions: ['schedule', 'completeReminder', 'cancelReminder'],
                 },
               ],
             },
           };
-        if (path.includes('/access')) return { data: { edit } };
+        if (path.includes('/access'))
+          return {
+            data: {
+              edit,
+              actions: {
+                scheduleReminder: edit,
+                cancelReminder: edit,
+                completeReminder: edit,
+              },
+            },
+          };
         if (path.endsWith('/quotes'))
           return {
             data: [{ id: 'quote-id', name: 'Implementation quotation' }],

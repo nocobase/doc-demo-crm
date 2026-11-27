@@ -32,7 +32,7 @@ export default function SubmitQuote() {
     quote?: Quote;
     reload: () => void;
   }>();
-  const access = useCustomerOperation(customerId, 'editQuote');
+  const access = useCustomerOperation(customerId, 'submitQuote');
   const request = useListData<{ data: { id: string; name: string }[] }>(
     'crmApprovals/reviewers',
     { active: access.allowed },

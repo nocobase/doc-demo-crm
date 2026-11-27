@@ -1,4 +1,9 @@
-import { useApiClient, useSubmission } from '@nocobase/app-client';
+import { useCustomerOperation } from '#hooks/use-crm-access';
+import {
+  resolveAppUrl,
+  useApiClient,
+  useSubmission,
+} from '@nocobase/app-client';
 import { useAuthentication } from '@nocobase/app-plugin-authentication/client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useState } from 'react';
@@ -19,9 +24,11 @@ export default function QuoteDocument({ revision }: { revision: number }) {
   const api = useApiClient();
   const { session } = useAuthentication();
   const { customerId, opportunityId, quoteId } = useParams();
+  const issue = useCustomerOperation(customerId, 'issueQuote');
   const path = `crmFiles/quotes/${customerId}/${opportunityId}/${quoteId}`;
   const request = useListData<{
     data: {
+      draft: boolean;
       confirmed: boolean;
       document: null | { file: BusinessFile; templateRevision: number };
     };
@@ -30,24 +37,60 @@ export default function QuoteDocument({ revision }: { revision: number }) {
     scope: `${session?.user.id}:document:${quoteId}`,
   });
   const [failed, setFailed] = useState(false);
+  const [downloadingDraft, setDownloadingDraft] = useState(false);
   const [preview, setPreview] = useState(false);
   const file = request.data?.data.document?.file;
+  const downloadDraft = async () => {
+    setFailed(false);
+    setDownloadingDraft(true);
+    try {
+      await downloadFile({
+        filename: `draft-quotation-${quoteId}.docx`,
+        contentUrl: resolveAppUrl(`/api/${path}/draft`),
+        mimeType:
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+    } catch {
+      setFailed(true);
+    } finally {
+      setDownloadingDraft(false);
+    }
+  };
   const download = () => {
     if (file) return downloadFile(file).catch(() => setFailed(true));
   };
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('documents.quotation')}</CardTitle>
+        <CardTitle>
+          {t(
+            request.data?.data.draft
+              ? 'documents.draftQuotation'
+              : 'documents.quotation',
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className='space-y-3'>
-        <p className='text-sm text-muted-foreground'>
-          {t('documents.quoteHint')}
-        </p>
+        {request.data ? (
+          <p className='text-sm text-muted-foreground'>
+            {t(
+              request.data.data.draft
+                ? 'documents.draftHint'
+                : 'documents.quoteHint',
+            )}
+          </p>
+        ) : null}
         {request.error ? (
           <ReadError error={request.error} retry={request.reload} />
         ) : !request.data ? (
           <Loading />
+        ) : request.data.data.draft ? (
+          <PendingButton
+            busy={downloadingDraft}
+            onClick={() => void downloadDraft()}
+          >
+            {t('documents.downloadDraft')}
+          </PendingButton>
         ) : file ? (
           <>
             <FileList
@@ -67,7 +110,7 @@ export default function QuoteDocument({ revision }: { revision: number }) {
               onError={() => setFailed(true)}
             />
           </>
-        ) : request.data.data.confirmed ? (
+        ) : request.data.data.confirmed && issue.allowed ? (
           <PendingButton
             busy={submission.submitting}
             onClick={() => {
@@ -87,7 +130,7 @@ export default function QuoteDocument({ revision }: { revision: number }) {
           >
             {t('documents.generate')}
           </PendingButton>
-        ) : (
+        ) : request.data.data.confirmed ? null : (
           <p>{t('documents.confirmFirst')}</p>
         )}
         {failed ? (

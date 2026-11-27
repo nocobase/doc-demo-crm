@@ -1,5 +1,6 @@
 import {
   authorizeCrm,
+  customerReads,
   scopedRepository,
 } from '../providers/crm-permissions.js';
 import type { Application } from '@nocobase/app-server/application';
@@ -59,7 +60,7 @@ export default defineApiRoutes(async (app: Application) => {
   router.get(
     '/customers',
     async (c, next) => {
-      await authorizeCrm(c.get('authz'), 'view');
+      await authorizeCrm(c.get('authz'), 'viewCustomer');
       await next();
     },
     describeRoute({
@@ -72,14 +73,14 @@ export default defineApiRoutes(async (app: Application) => {
       c.json(
         await new CrmService(
           connection,
-          await authorizeCrm(c.get('authz'), 'view'),
+          await authorizeCrm(c.get('authz'), 'viewCustomer'),
         ).list(c.req.valid('query')),
       ),
   );
   router.get(
     '/customers/:id',
     async (c, next) => {
-      await authorizeCrm(c.get('authz'), 'view');
+      await authorizeCrm(c.get('authz'), 'viewCustomer');
       await next();
     },
     describeRoute({
@@ -92,7 +93,7 @@ export default defineApiRoutes(async (app: Application) => {
       c.json({
         data: await new CrmService(
           connection,
-          await authorizeCrm(c.get('authz'), 'view'),
+          await authorizeCrm(c.get('authz'), 'viewCustomer'),
         ).get(c.req.valid('param').id),
       }),
   );
@@ -100,7 +101,10 @@ export default defineApiRoutes(async (app: Application) => {
     router.get(
       `/customers/:id/${kind}`,
       async (c, next) => {
-        await authorizeCrm(c.get('authz'), 'view');
+        await customerReads(
+          c.get('authz'),
+          kind === 'contacts' ? 'viewContacts' : 'viewFollowUps',
+        );
         await next();
       },
       describeRoute({
@@ -117,7 +121,10 @@ export default defineApiRoutes(async (app: Application) => {
         c.json(
           await new CrmService(
             connection,
-            await authorizeCrm(c.get('authz'), 'view'),
+            await customerReads(
+              c.get('authz'),
+              kind === 'contacts' ? 'viewContacts' : 'viewFollowUps',
+            ),
           ).related(c.req.valid('param').id, kind, c.req.valid('query').page),
         ),
     );

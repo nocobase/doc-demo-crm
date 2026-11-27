@@ -49,8 +49,8 @@ async function renderAssistant({
               unrestricted: false,
               permissions: [
                 {
-                  resource: { type: 'composite', id: 'crm.records' },
-                  actions: ['view', 'recordFollowUp'],
+                  resource: { type: 'composite', id: 'crm.followUps' },
+                  actions: ['view', 'create'],
                 },
               ],
             },

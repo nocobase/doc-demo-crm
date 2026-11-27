@@ -21,13 +21,20 @@ import {
 import { defineFileRepositoryApiRoutes } from '@nocobase/app-plugin-file/server';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { authorizeCrm } from '../providers/crm-permissions.js';
+import {
+  authorizeCrm,
+  customerReads,
+  scopedRepository,
+} from '../providers/crm-permissions.js';
 import { CrmService } from '../providers/crm.js';
 import { SalesService } from '../providers/sales.js';
 import {
   CustomerFilesService,
+  customerFileDisk,
   fileMissing,
 } from '../providers/customer-files.js';
+import { DOCX_MIME } from '../providers/quotation-renderer.js';
+import { quotationTemplateRevision } from '../templates/quotation-v2.js';
 type Env = AuthEnv & AuthorizationEnv;
 const describe = (summary: string) =>
   describeRoute({
@@ -69,8 +76,32 @@ const contentGuard = defineRootRoutes((app: Application) => {
       if (file.customerId) {
         await new CrmService(
           service.connection,
-          await authorizeCrm(c.get('authz'), 'view'),
+          await authorizeCrm(c.get('authz'), 'viewCustomer'),
         ).get(file.customerId);
+        if (file.status === 'document') {
+          const document = await service.connection
+            .repository('crmQuoteDocuments')
+            .findOne({ filter: { fileId: file.id } });
+          const policies = await customerReads(c.get('authz'), 'viewQuotes');
+          const quote =
+            document &&
+            (await scopedRepository(
+              service.connection,
+              policies,
+              'crmQuotes',
+            ).findOne({
+              filter: {
+                id: z.string().parse(document.quoteId),
+                customerId: file.customerId,
+              },
+            }));
+          if (!quote) throw fileMissing();
+          await new SalesService(service.connection, policies).quote(
+            file.customerId,
+            z.string().parse(quote.opportunityId),
+            z.string().parse(quote.id),
+          );
+        }
       } else if (
         file.status !== 'staged' ||
         file.ownerId !== c.get('auth')!.user.id
@@ -88,57 +119,58 @@ const contentGuard = defineRootRoutes((app: Application) => {
   );
   return new Hono().route('/', r);
 });
-const nativeFiles = defineFileRepositoryApiRoutes<{
-  id: string;
-  upload: boolean;
-}>({
-  principal: async (c) => {
-    const context = c as import('hono').Context<Env>;
-    let upload = false;
-    try {
-      await authorizeCrm(context.get('authz'), 'editCustomer');
-      upload = true;
-    } catch {
-      /* Read-only users may still read their own private staging metadata. */
-    }
-    return { id: context.get('auth')!.user.id, upload };
-  },
-  repositories: [
-    {
-      name: 'crmFileUploads',
-      collection: 'crmFiles',
-      connection: 'main',
-      disk: 'local',
-      accessPath: '/uploads/crmFiles',
-      accessMode: 'stream',
-      policy: (p) => ({
-        read: {
-          scope: { ownerId: p.id, status: 'staged', customerId: null },
-          fields: [
-            'id',
-            'filename',
-            'ext',
-            'mimeType',
-            'size',
-            'createdAt',
-            'updatedAt',
-          ],
-        },
-        create: p.upload
-          ? { scope: true, defaults: { ownerId: p.id, status: 'staged' } }
-          : false,
-        update: false,
-        delete: false,
-      }),
-      actions: {
-        findOne: {},
-        findMany: { maxLimit: 100 },
-        uploadOne: { maxSize: 5 * 1024 * 1024 },
-        uploadMany: { maxSize: 5 * 1024 * 1024 },
-      },
+const nativeFiles = (disk: string) =>
+  defineFileRepositoryApiRoutes<{
+    id: string;
+    upload: boolean;
+  }>({
+    principal: async (c) => {
+      const context = c as import('hono').Context<Env>;
+      let upload = false;
+      try {
+        await authorizeCrm(context.get('authz'), 'attachFile');
+        upload = true;
+      } catch {
+        /* Read-only users may still read their own private staging metadata. */
+      }
+      return { id: context.get('auth')!.user.id, upload };
     },
-  ],
-});
+    repositories: [
+      {
+        name: 'crmFileUploads',
+        collection: 'crmFiles',
+        connection: 'main',
+        disk,
+        accessPath: '/uploads/crmFiles',
+        accessMode: 'stream',
+        policy: (p) => ({
+          read: {
+            scope: { ownerId: p.id, status: 'staged', customerId: null },
+            fields: [
+              'id',
+              'filename',
+              'ext',
+              'mimeType',
+              'size',
+              'createdAt',
+              'updatedAt',
+            ],
+          },
+          create: p.upload
+            ? { scope: true, defaults: { ownerId: p.id, status: 'staged' } }
+            : false,
+          update: false,
+          delete: false,
+        }),
+        actions: {
+          findOne: {},
+          findMany: { maxLimit: 100 },
+          uploadOne: { maxSize: 5 * 1024 * 1024 },
+          uploadMany: { maxSize: 5 * 1024 * 1024 },
+        },
+      },
+    ],
+  });
 const businessFiles = defineApiRoutes((app: Application) => {
   const r = new Hono<Env>();
   r.onError(apiErrorHandler);
@@ -153,8 +185,8 @@ const businessFiles = defineApiRoutes((app: Application) => {
     );
   r.use('/crmDocuments/*', async (c, next) => {
     await c.get('authz').require({
-      resource: { type: 'page', id: 'crm.documents' },
-      action: 'access',
+      resource: { type: 'settings', id: 'crm.documents' },
+      action: c.req.method === 'DELETE' ? 'cleanup' : 'read',
     });
     await next();
   });
@@ -170,7 +202,7 @@ const businessFiles = defineApiRoutes((app: Application) => {
       const { customerId } = c.req.valid('param');
       await new CrmService(
         service.connection,
-        await authorizeCrm(c.get('authz'), 'view'),
+        await authorizeCrm(c.get('authz'), 'viewCustomer'),
       ).get(customerId);
       return c.json(await service.list(customerId, c.req.valid('query').page));
     },
@@ -192,7 +224,7 @@ const businessFiles = defineApiRoutes((app: Application) => {
     ),
     async (c) => {
       const { customerId } = c.req.valid('param');
-      const policies = await authorizeCrm(c.get('authz'), 'editCustomer');
+      const policies = await authorizeCrm(c.get('authz'), 'attachFile');
       const actor = c.get('auth')!.user.id;
       const input = c.req.valid('json');
       const result = await executeIdempotentMutation({
@@ -222,7 +254,7 @@ const businessFiles = defineApiRoutes((app: Application) => {
     apiValidator('header', header),
     async (c) => {
       const input = c.req.valid('param');
-      const policies = await authorizeCrm(c.get('authz'), 'editCustomer');
+      const policies = await authorizeCrm(c.get('authz'), 'removeFile');
       const actor = c.get('auth')!.user.id;
       const result = await executeIdempotentMutation({
         connection: service.connection,
@@ -254,15 +286,48 @@ const businessFiles = defineApiRoutes((app: Application) => {
       const p = c.req.valid('param');
       await new SalesService(
         service.connection,
-        await authorizeCrm(c.get('authz'), 'view'),
+        await customerReads(c.get('authz'), 'viewQuotes'),
       ).quote(p.customerId, p.opportunityId, p.quoteId);
       const approval = await service.connection
         .repository('crmQuoteApprovals')
         .findOne({ filter: { quoteId: p.quoteId } });
       return c.json({
         data: {
+          draft: !approval || approval.status === 'draft',
           confirmed: approval?.status === 'confirmed',
           document: await service.document(p.quoteId),
+        },
+      });
+    },
+  );
+  r.get(
+    `${quotePath}/draft`,
+    describeRoute({
+      tags: ['CRM documents'],
+      summary: 'Download a preview of the current draft quotation',
+      responses: {
+        200: {
+          description: 'English draft quotation',
+          content: {
+            [DOCX_MIME]: { schema: { type: 'string', format: 'binary' } },
+          },
+        },
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('param', quoteParams),
+    async (c) => {
+      const input = c.req.valid('param');
+      const bytes = await service.draftPreview(
+        await customerReads(c.get('authz'), 'viewQuotes'),
+        input,
+      );
+      return new Response(new Uint8Array(bytes), {
+        headers: {
+          'Content-Type': DOCX_MIME,
+          'Content-Disposition': `attachment; filename="draft-quotation-${input.quoteId}.docx"`,
+          'Cache-Control': 'private, no-store',
+          'X-Content-Type-Options': 'nosniff',
         },
       });
     },
@@ -274,7 +339,7 @@ const businessFiles = defineApiRoutes((app: Application) => {
     apiValidator('header', header),
     async (c) => {
       const input = c.req.valid('param');
-      const policies = await authorizeCrm(c.get('authz'), 'view');
+      const policies = await authorizeCrm(c.get('authz'), 'issueQuote');
       const actor = c.get('auth')!.user.id;
       const result = await executeIdempotentMutation({
         connection: service.connection,
@@ -330,13 +395,13 @@ const businessFiles = defineApiRoutes((app: Application) => {
       c.json({
         data: {
           template: {
-            id: 'quotation-v1',
-            revision: 1,
+            id: `quotation-v${quotationTemplateRevision}`,
+            revision: quotationTemplateRevision,
             format: 'docx',
             language: 'en-US',
           },
           storage: {
-            disk: 'local',
+            disk: service.disk,
             access: 'authenticated',
             uploadMaxBytes: 5 * 1024 * 1024,
             attachMaxFiles: 10,
@@ -372,8 +437,8 @@ const businessFiles = defineApiRoutes((app: Application) => {
       const input = c.req.valid('param');
       const authorize = async () => {
         await c.get('authz').require({
-          resource: { type: 'page', id: 'crm.documents' },
-          action: 'access',
+          resource: { type: 'settings', id: 'crm.documents' },
+          action: 'cleanup',
         });
       };
       try {
@@ -401,4 +466,20 @@ const businessFiles = defineApiRoutes((app: Application) => {
   );
   return new Hono().route('/', r);
 });
-export default [fileGuards, contentGuard, ...nativeFiles, businessFiles];
+async function nativeFileRouter(app: Application, scope: 'api' | 'root') {
+  const router = new Hono();
+  for (const route of nativeFiles(customerFileDisk(app))) {
+    if (route.scope === scope) {
+      router.route('/', await route.createRouter(app));
+    }
+  }
+  return router;
+}
+
+export default [
+  fileGuards,
+  contentGuard,
+  defineApiRoutes((app: Application) => nativeFileRouter(app, 'api')),
+  defineRootRoutes((app: Application) => nativeFileRouter(app, 'root')),
+  businessFiles,
+];

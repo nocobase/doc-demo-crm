@@ -1,3 +1,7 @@
+import {
+  crmOperations,
+  type CrmOperation,
+} from '../../server/crm-operations.js';
 import { useAuthentication } from '@nocobase/app-plugin-authentication/client';
 import {
   useAuthorizationRevision,
@@ -7,8 +11,6 @@ import { useListData } from './use-list-data.js';
 
 export interface CrmAccess {
   createCustomer: boolean;
-  manageProducts: boolean;
-  productActions?: { view: boolean; create: boolean; edit: boolean };
 }
 export interface CustomerAccess {
   edit: boolean;
@@ -51,19 +53,13 @@ export function useCustomerAccess(customerId?: string, revision = 0) {
 }
 export function useCustomerOperation(
   customerId: string | undefined,
-  action: string,
+  action: CrmOperation,
 ) {
   const request = useCustomerAccess(customerId);
-  const permission = useCan({
-    resource: { type: 'composite', id: 'crm.records' },
-    action,
-  });
+  const permission = useCan(crmOperations[action]);
   return {
     ...request,
-    allowed: Boolean(
-      (request.access?.actions?.[action] ?? request.access?.edit) &&
-      permission.can,
-    ),
+    allowed: Boolean(request.access?.actions?.[action] && permission.can),
     loading: request.loading || permission.isPending,
     error: request.error ?? permission.error,
     reload: () => {

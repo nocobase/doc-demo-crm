@@ -28,7 +28,7 @@ import {
 } from '@nocobase/app-plugin-approval/server';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { authorizeCrm } from '../providers/crm-permissions.js';
+import { authorizeCrm, customerReads } from '../providers/crm-permissions.js';
 import { SalesService } from '../providers/sales.js';
 import { lockQuote } from '../providers/quote-lock.js';
 import { quoteApprovalServiceToken } from '../providers/quote-approvals.js';
@@ -120,7 +120,7 @@ export default defineApiRoutes(async (app: Application) => {
       if (!record) throw denied();
       await new SalesService(
         connection,
-        await authorizeCrm(c.get('authz'), 'view'),
+        await customerReads(c.get('authz'), 'viewQuotes'),
       ).quote(
         typeof record.customerId === 'string' ? record.customerId : '',
         typeof record.opportunityId === 'string' ? record.opportunityId : '',
@@ -139,7 +139,7 @@ export default defineApiRoutes(async (app: Application) => {
     '/reviewers',
     describe('List eligible quotation reviewers'),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'editQuote');
+      await authorizeCrm(c.get('authz'), 'submitQuote');
       return c.json({
         data: (await service.reviewers()).filter(
           (person) => person.id !== c.get('auth')!.user.id,
@@ -156,7 +156,7 @@ export default defineApiRoutes(async (app: Application) => {
       const actor = { id: c.get('auth')!.user.id };
       await new SalesService(
         connection,
-        await authorizeCrm(c.get('authz'), 'view'),
+        await customerReads(c.get('authz'), 'viewQuotes'),
       ).quote(customerId, opportunityId, quoteId);
       const record = await connection
         .repository(lifecycle)
@@ -230,7 +230,7 @@ export default defineApiRoutes(async (app: Application) => {
       const { customerId, opportunityId, quoteId } = c.req.valid('param');
       const input = c.req.valid('json');
       const actor = { id: c.get('auth')!.user.id };
-      const policies = await authorizeCrm(c.get('authz'), 'editQuote');
+      const policies = await authorizeCrm(c.get('authz'), 'submitQuote');
       const check = () =>
         new SalesService(connection, policies).quote(
           customerId,
@@ -350,7 +350,7 @@ export default defineApiRoutes(async (app: Application) => {
       const { customerId, opportunityId, quoteId } = c.req.valid('param');
       await new SalesService(
         connection,
-        await authorizeCrm(c.get('authz'), 'editQuote'),
+        await authorizeCrm(c.get('authz'), 'withdrawQuote'),
       ).quote(customerId, opportunityId, quoteId);
       const result = await service.runtime.fire(
         await service.runtime.boundLifecycle(lifecycle, quoteId),
@@ -377,7 +377,10 @@ export default defineApiRoutes(async (app: Application) => {
       const actor = { id: c.get('auth')!.user.id };
       await new SalesService(
         connection,
-        await authorizeCrm(c.get('authz'), 'editQuote'),
+        await authorizeCrm(
+          c.get('authz'),
+          `${c.req.valid('json').action}Quote`,
+        ),
       ).quote(customerId, opportunityId, quoteId);
       const input = c.req.valid('json');
       if (!(await service.reviewers()).some((person) => person.id === actor.id))

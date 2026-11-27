@@ -1,3 +1,5 @@
+import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { crmOperations } from '../../../server/crm-operations.js';
 import { useApiClient } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { RefreshCw, Send } from 'lucide-react';
@@ -26,14 +28,16 @@ export default function QuoteErpSync({
 }) {
   const { t } = useTranslation();
   const api = useApiClient();
+  const read = useCan(crmOperations.readIntegrations);
+  const sync = useCan(crmOperations.syncIntegrations);
   const deliveries = useListData<{ data: SyncDelivery[] }>(
     `crmIntegrations/deliveries?entityType=quote&entityId=${quoteId}`,
-    { active: confirmed },
+    { active: confirmed && read.can },
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!confirmed) return null;
+  if (!confirmed || !read.can) return null;
   if (deliveries.error) return null;
 
   const latest = deliveries.data?.data[0];
@@ -99,7 +103,7 @@ export default function QuoteErpSync({
             {error}
           </p>
         ) : null}
-        {!latest || latest.status === 'failed' ? (
+        {sync.can && (!latest || latest.status === 'failed') ? (
           <PendingButton busy={busy} onClick={() => void triggerSync()}>
             {latest ? (
               <RefreshCw className='mr-2 size-4' />

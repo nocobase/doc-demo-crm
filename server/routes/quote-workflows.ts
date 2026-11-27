@@ -59,17 +59,10 @@ export default defineApiRoutes(async (app: Application) => {
         .required({ scopedKeys: false }),
       app.container.resolve(authorizationToken).middleware(),
       async (c, next) => {
-        const decision = await c.get('authz').authorize({
-          resource: { type: 'composite', id: 'crm.workflow' },
+        await c.get('authz').require({
+          resource: { type: 'settings', id: 'crm.workflow' },
           action: c.req.method === 'GET' ? 'read' : 'configure',
         });
-        if (decision.effect === 'deny')
-          throw new ApiError({
-            status: 'PERMISSION_DENIED',
-            reason: 'WORKFLOW_ACCESS_DENIED',
-            domain: 'crm',
-            message: 'Workflow administration access is required.',
-          });
         await next();
       },
     );

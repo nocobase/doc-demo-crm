@@ -49,13 +49,14 @@ export function CustomerAttachments({
   customerId: string;
   revision: number;
 }) {
-  const access = useCustomerOperation(customerId, 'editCustomer');
+  const access = useCustomerOperation(customerId, 'attachFile');
+  const remove = useCustomerOperation(customerId, 'removeFile');
   const location = useLocation();
   return (
     <FilesTable
       path={`crmFiles/customers/${customerId}`}
       revision={revision}
-      canRemove={access.allowed}
+      canRemove={remove.allowed}
       action={
         access.allowed ? (
           <Button

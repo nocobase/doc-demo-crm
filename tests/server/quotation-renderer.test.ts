@@ -1,25 +1,16 @@
-import { inflateRawSync } from 'node:zlib';
+import { readFile } from 'node:fs/promises';
+import { quotationTemplate } from '../../server/templates/quotation-v2.js';
 import { expect, test } from 'vitest';
 import { renderQuotation } from '../../server/providers/quotation-renderer.js';
-function documentXml(zip: Buffer) {
-  for (let i = 0; i < zip.length - 46; i++) {
-    if (zip.readUInt32LE(i) !== 0x02014b50) continue;
-    const nameLength = zip.readUInt16LE(i + 28);
-    const name = zip.subarray(i + 46, i + 46 + nameLength).toString();
-    if (name !== 'word/document.xml') continue;
-    const offset = zip.readUInt32LE(i + 42);
-    const start =
-      offset +
-      30 +
-      zip.readUInt16LE(offset + 26) +
-      zip.readUInt16LE(offset + 28);
-    const bytes = zip.subarray(start, start + zip.readUInt32LE(i + 20));
-    return (
-      zip.readUInt16LE(i + 10) === 8 ? inflateRawSync(bytes) : bytes
-    ).toString();
-  }
-  throw new Error('Missing DOCX document');
-}
+import { documentXml } from '../helpers/docx.js';
+
+test('ships the same DOCX template that the renderer embeds', async () => {
+  const source = await readFile(
+    new URL('../../docs/templates/quotation-v2.docx', import.meta.url),
+  );
+  expect(Buffer.from(quotationTemplate, 'base64')).toEqual(source);
+});
+
 test('renders every quotation row, escapes business text and retains fixed monetary values', async () => {
   const xml = documentXml(
     await renderQuotation({

@@ -50,7 +50,7 @@ export default function QuoteApprovalPanel({
 }) {
   const { t } = useTranslation();
   const { customerId, opportunityId, quoteId } = useParams();
-  const access = useCustomerOperation(customerId, 'editQuote');
+  const access = useCustomerOperation(customerId, 'submitQuote');
   const api = useApiClient();
   const { session } = useAuthentication();
   const path = approvalPath(customerId, opportunityId, quoteId);
@@ -71,104 +71,105 @@ export default function QuoteApprovalPanel({
       id ? (data.people?.[id] ?? id) : '',
     stage: () => t('quoteApproval.review'),
   };
-  const actions: ApprovalBarAction[] = (
-    access.allowed ? data.actions : []
-  ).flatMap((group) =>
-    group.actions.map((action) => ({
-      key: `${group.task.id}:${action.name}`,
-      label: t(`quoteApproval.${action.name}`),
-      tone: action.tone,
-      primary: action.primary,
-      confirm: action.name === 'approve',
-      ...(action.name === 'approve'
-        ? {}
-        : {
-            form: {
-              initialValues: { comment: '' },
-              validate: (values: Record<string, unknown>) =>
-                (typeof values.comment === 'string'
-                  ? values.comment
-                  : ''
-                ).trim()
-                  ? []
-                  : ['comment'],
-              render: ({
-                values,
-                setValues,
-                invalid,
-              }: {
-                values: Record<string, unknown>;
-                invalid: readonly string[];
-                setValues: (values: Record<string, unknown>) => void;
-              }) => (
-                <div className='space-y-2'>
-                  <Label htmlFor='approval-comment'>
-                    {t('quoteApproval.reason')}
-                  </Label>
-                  <Textarea
-                    id='approval-comment'
-                    required
-                    aria-invalid={invalid.includes('comment')}
-                    aria-describedby={
-                      invalid.includes('comment')
-                        ? 'approval-comment-error'
-                        : undefined
-                    }
-                    value={
-                      typeof values.comment === 'string' ? values.comment : ''
-                    }
-                    onChange={(event) =>
-                      setValues({ comment: event.target.value })
-                    }
-                  />
-                  {invalid.includes('comment') ? (
-                    <p
-                      id='approval-comment-error'
-                      className='text-sm text-destructive'
-                    >
-                      {t('quoteApproval.reasonRequired')}
-                    </p>
-                  ) : null}
-                </div>
-              ),
-            },
-          }),
-      run: async (values: Record<string, unknown>) => {
-        try {
-          setError(undefined);
-          await submission.run(
-            {
-              taskId: group.task.id,
-              action: action.name,
-              comment: typeof values.comment === 'string' ? values.comment : '',
-              contentHash:
-                group.contentHash ??
-                data.runs.find((run) => run.run.id === group.task.runId)?.run
-                  .contentHash ??
-                '',
-            },
-            (key, signal, payload) =>
-              api.request({
-                path: `${path}/actions`,
-                method: 'POST',
-                headers: { 'Idempotency-Key': key },
-                signal,
-                json: payload,
-              }),
-          );
-          request.reload();
-          onHandled();
-          return true;
-        } catch (failure) {
-          setError(failure);
-          request.reload();
-          return false;
-        }
-      },
-    })),
+  const actions: ApprovalBarAction[] = data.actions.flatMap((group) =>
+    group.actions
+      .filter((action) => access.access?.actions?.[`${action.name}Quote`])
+      .map((action) => ({
+        key: `${group.task.id}:${action.name}`,
+        label: t(`quoteApproval.${action.name}`),
+        tone: action.tone,
+        primary: action.primary,
+        confirm: action.name === 'approve',
+        ...(action.name === 'approve'
+          ? {}
+          : {
+              form: {
+                initialValues: { comment: '' },
+                validate: (values: Record<string, unknown>) =>
+                  (typeof values.comment === 'string'
+                    ? values.comment
+                    : ''
+                  ).trim()
+                    ? []
+                    : ['comment'],
+                render: ({
+                  values,
+                  setValues,
+                  invalid,
+                }: {
+                  values: Record<string, unknown>;
+                  invalid: readonly string[];
+                  setValues: (values: Record<string, unknown>) => void;
+                }) => (
+                  <div className='space-y-2'>
+                    <Label htmlFor='approval-comment'>
+                      {t('quoteApproval.reason')}
+                    </Label>
+                    <Textarea
+                      id='approval-comment'
+                      required
+                      aria-invalid={invalid.includes('comment')}
+                      aria-describedby={
+                        invalid.includes('comment')
+                          ? 'approval-comment-error'
+                          : undefined
+                      }
+                      value={
+                        typeof values.comment === 'string' ? values.comment : ''
+                      }
+                      onChange={(event) =>
+                        setValues({ comment: event.target.value })
+                      }
+                    />
+                    {invalid.includes('comment') ? (
+                      <p
+                        id='approval-comment-error'
+                        className='text-sm text-destructive'
+                      >
+                        {t('quoteApproval.reasonRequired')}
+                      </p>
+                    ) : null}
+                  </div>
+                ),
+              },
+            }),
+        run: async (values: Record<string, unknown>) => {
+          try {
+            setError(undefined);
+            await submission.run(
+              {
+                taskId: group.task.id,
+                action: action.name,
+                comment:
+                  typeof values.comment === 'string' ? values.comment : '',
+                contentHash:
+                  group.contentHash ??
+                  data.runs.find((run) => run.run.id === group.task.runId)?.run
+                    .contentHash ??
+                  '',
+              },
+              (key, signal, payload) =>
+                api.request({
+                  path: `${path}/actions`,
+                  method: 'POST',
+                  headers: { 'Idempotency-Key': key },
+                  signal,
+                  json: payload,
+                }),
+            );
+            request.reload();
+            onHandled();
+            return true;
+          } catch (failure) {
+            setError(failure);
+            request.reload();
+            return false;
+          }
+        },
+      })),
   );
   if (
-    access.allowed &&
+    access.access?.actions?.withdrawQuote &&
     data.view?.available.some(
       (action) => action.name === 'withdraw' && action.allowed,
     )

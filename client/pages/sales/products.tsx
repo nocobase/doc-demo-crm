@@ -9,14 +9,12 @@ import { DataTable } from '#components/data-table';
 import { Button } from '#components/ui/button';
 import { Input } from '#components/ui/input';
 import { useListData } from '#hooks/use-list-data';
-import { useCrmAccess } from '#hooks/use-crm-access';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { ReadError } from '../customers/shared.js';
 import type { ListResult } from '../customers/types.js';
 import { money, type Product } from './types.js';
 export default function Products() {
   const { t } = useTranslation();
-  const access = useCrmAccess();
   const create = useCan({
     resource: { type: 'composite', id: 'crm.products' },
     action: 'create',
@@ -52,8 +50,6 @@ export default function Products() {
       id: 'edit',
       header: '',
       cell: ({ row }) =>
-        access.access &&
-        (access.access.productActions?.edit ?? edit.can) &&
         edit.can ? (
           <Button
             variant='ghost'
@@ -65,14 +61,11 @@ export default function Products() {
         ) : null,
     },
   ];
-  const action =
-    access.access &&
-    (access.access.productActions?.create ?? create.can) &&
-    create.can ? (
-      <Button nativeButton={false} render={<Link to='new' />}>
-        {t('sales.newProduct')}
-      </Button>
-    ) : undefined;
+  const action = create.can ? (
+    <Button nativeButton={false} render={<Link to='new' />}>
+      {t('sales.newProduct')}
+    </Button>
+  ) : undefined;
   return (
     <PageContainer>
       <PageHeader
@@ -80,8 +73,14 @@ export default function Products() {
         description={t('sales.catalogueHint')}
         actions={action}
       />
-      {access.error ? (
-        <ReadError error={access.error} retry={access.reload} />
+      {create.error || edit.error ? (
+        <ReadError
+          error={create.error ?? edit.error}
+          retry={() => {
+            void create.retry();
+            void edit.retry();
+          }}
+        />
       ) : null}
       <form
         className='flex gap-2'

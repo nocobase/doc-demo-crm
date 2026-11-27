@@ -1,3 +1,5 @@
+import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { crmOperations } from '../../../server/crm-operations.js';
 import { usePageBreadcrumb } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useState } from 'react';
@@ -51,16 +53,31 @@ export default function CustomerDetail() {
     owner.reload();
     setRevision((v) => v + 1);
   };
+  const contacts = useCan(crmOperations.viewContacts).can;
+  const followUps = useCan(crmOperations.viewFollowUps).can;
+  const opportunities = useCan(crmOperations.viewOpportunities).can;
+  const mail = useCan({
+    resource: { type: 'page', id: 'mail.workspace' },
+    action: 'access',
+  }).can;
   const tabs = [
     { value: 'overview', label: t('crm.overview') },
-    { value: 'contacts', label: t('crm.contacts') },
-    { value: 'followUps', label: t('crm.followUps') },
-    { value: 'opportunities', label: t('sales.opportunities') },
+    { visible: contacts, value: 'contacts', label: t('crm.contacts') },
+    { visible: followUps, value: 'followUps', label: t('crm.followUps') },
+    {
+      visible: opportunities,
+      value: 'opportunities',
+      label: t('sales.opportunities'),
+    },
     { value: 'reminders', label: t('reminders.title') },
-    { value: 'mail', label: t('crmMail.title') },
+    { visible: contacts && mail, value: 'mail', label: t('crmMail.title') },
     { value: 'attachments', label: t('documents.attachments') },
-    { value: 'assistant', label: t('crmAssistant.tab') },
-  ];
+    {
+      visible: access.access?.actions?.useAssistant,
+      value: 'assistant',
+      label: t('crmAssistant.tab'),
+    },
+  ].filter((tab) => !('visible' in tab) || tab.visible);
   const segment = location.pathname.slice(ownPath.length + 1).split('/')[0];
   const current = tabs.find((tab) => tab.value === segment)?.value;
   const parentEntry =

@@ -1,3 +1,4 @@
+import DailyReportsProvider from './daily-reports.js';
 import CrmAssistantProvider from './crm-assistant.js';
 import CrmImportsProvider from './crm-imports.js';
 import CrmIntegrationsProvider from './crm-integrations.js';
@@ -16,6 +17,7 @@ const serviceProviders: readonly ApplicationServiceProviderConstructor[] = [
   CrmNotificationsProvider,
   QuoteApprovalsProvider,
   CrmRemindersProvider,
+  DailyReportsProvider,
   CrmAssistantProvider,
   CrmImportsProvider,
   CrmIntegrationsProvider,

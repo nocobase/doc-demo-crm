@@ -21,7 +21,7 @@ import {
   ApiError,
 } from '@nocobase/app-server/router';
 import {
-  authorizeCrm,
+  customerReads,
   scopedRepository,
 } from '../providers/crm-permissions.js';
 import { CrmService } from '../providers/crm.js';
@@ -62,7 +62,7 @@ export default defineApiRoutes((app: Application) => {
       const connection = app.container
         .resolve(databaseManagerToken)
         .connection();
-      const policies = await authorizeCrm(c.get('authz'), 'view');
+      const policies = await customerReads(c.get('authz'), 'viewContacts');
       const { customerId } = c.req.valid('param');
       const { contactId, page } = c.req.valid('query');
       await new CrmService(connection, policies).get(customerId);

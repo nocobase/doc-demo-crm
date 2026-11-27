@@ -7,6 +7,7 @@ import {
   Building2,
   Package,
   LayoutDashboard,
+  CalendarDays,
   ListTodo,
   Plug,
 } from 'lucide-react';
@@ -70,7 +71,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'crm-tasks',
     path: '/tasks',
     auth: 'required',
-    authz: { resource: { type: 'page', id: 'customers' }, action: 'access' },
+    authz: { resource: { type: 'page', id: 'crm.tasks' }, action: 'access' },
     navigation: { title: 'quoteApproval.tasks', icon: ListTodo },
     componentLoader: () => import('./pages/tasks/index.js'),
     children: [
@@ -102,15 +103,32 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'sales-workspace',
     path: '/sales',
     auth: 'required',
-    authz: { resource: { type: 'page', id: 'customers' }, action: 'access' },
+    authz: {
+      resource: { type: 'page', id: 'crm.workspace' },
+      action: 'access',
+    },
     navigation: { title: 'workspace.title', icon: LayoutDashboard },
     componentLoader: () => import('./pages/sales-workspace/index.js'),
+  },
+  {
+    name: 'crm-daily-reports',
+    path: '/sales-reports',
+    auth: 'required',
+    authz: {
+      resource: { type: 'page', id: 'crm.dailyReports' },
+      action: 'access',
+    },
+    navigation: { title: 'dailyReports.title', icon: CalendarDays },
+    componentLoader: () => import('./pages/sales-workspace/daily-reports.js'),
   },
   {
     name: 'customers',
     path: '/customers',
     auth: 'required',
-    authz: { resource: { type: 'page', id: 'customers' }, action: 'access' },
+    authz: {
+      resource: { type: 'page', id: 'crm.customers' },
+      action: 'access',
+    },
     navigation: { title: 'crm.title', icon: Building2 },
     componentLoader: () => import('./pages/customers/index.js'),
     children: [
@@ -311,7 +329,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'products',
     path: '/products',
     auth: 'required',
-    authz: { resource: { type: 'page', id: 'customers' }, action: 'access' },
+    authz: { resource: { type: 'page', id: 'crm.products' }, action: 'access' },
     navigation: { title: 'sales.products', icon: Package },
     componentLoader: () => import('./pages/sales/products.js'),
     children: [
@@ -399,8 +417,8 @@ const crmSettingsRoutes = defineSystemSettingsRoutes([
     path: '/documents',
     auth: 'required',
     authz: {
-      resource: { type: 'page', id: 'crm.documents' },
-      action: 'access',
+      resource: { type: 'settings', id: 'crm.documents' },
+      action: 'read',
     },
     navigation: { title: 'documents.settings', icon: Package },
     componentLoader: () => import('./pages/settings/documents/index.js'),

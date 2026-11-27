@@ -1,3 +1,5 @@
+import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { crmOperations } from '../../../../server/crm-operations.js';
 import { useApiClient } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { RefreshCw, RotateCcw } from 'lucide-react';
@@ -65,6 +67,8 @@ function deliveryTone(status: SyncDelivery['status']) {
 export default function ExternalIntegrationsSettingsPage() {
   const { t } = useTranslation();
   const api = useApiClient();
+  const configure = useCan(crmOperations.configureIntegrations);
+  const sync = useCan(crmOperations.syncIntegrations);
   const targetReq = useListData<{ data: SyncTarget }>('crmIntegrations/target');
   const deliveriesReq = useListData<{ data: SyncDelivery[] }>(
     'crmIntegrations/deliveries',
@@ -151,95 +155,99 @@ export default function ExternalIntegrationsSettingsPage() {
               className='space-y-4'
               onSubmit={(e) => void handleSaveTarget(e)}
             >
-              <div className='grid gap-4 md:grid-cols-2'>
-                <div className='space-y-2'>
-                  <Label htmlFor='erp-name'>
-                    {t('integrations.targetName')}
-                  </Label>
-                  <Input
-                    id='erp-name'
-                    value={name}
-                    onChange={(e) =>
-                      setDraft((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    required
-                  />
+              <fieldset disabled={!configure.can} className='space-y-4'>
+                <div className='grid gap-4 md:grid-cols-2'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='erp-name'>
+                      {t('integrations.targetName')}
+                    </Label>
+                    <Input
+                      id='erp-name'
+                      value={name}
+                      onChange={(e) =>
+                        setDraft((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      required
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='erp-url'>
+                      {t('integrations.endpointUrl')}
+                    </Label>
+                    <Input
+                      id='erp-url'
+                      value={endpointUrl}
+                      onChange={(e) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          endpointUrl: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
                 </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='erp-url'>
-                    {t('integrations.endpointUrl')}
-                  </Label>
-                  <Input
-                    id='erp-url'
-                    value={endpointUrl}
-                    onChange={(e) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        endpointUrl: e.target.value,
-                      }))
-                    }
-                    required
-                  />
+                <div className='grid gap-4 md:grid-cols-3'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='erp-secret'>
+                      {t('integrations.secretHeader')}
+                    </Label>
+                    <Input
+                      id='erp-secret'
+                      value={secretHeader}
+                      onChange={(e) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          secretHeader: e.target.value,
+                        }))
+                      }
+                      placeholder='Optional X-Integration-Secret'
+                    />
+                  </div>
+                  <div className='flex items-center justify-between rounded-md border p-3'>
+                    <Label htmlFor='erp-enabled'>
+                      {t('integrations.enabled')}
+                    </Label>
+                    <Switch
+                      id='erp-enabled'
+                      checked={enabled}
+                      onCheckedChange={(checked) =>
+                        setDraft((prev) => ({ ...prev, enabled: checked }))
+                      }
+                    />
+                  </div>
+                  <div className='flex items-center justify-between rounded-md border p-3'>
+                    <Label htmlFor='erp-fail'>
+                      {t('integrations.simulateFailure')}
+                    </Label>
+                    <Switch
+                      id='erp-fail'
+                      checked={simulateFailure}
+                      onCheckedChange={(checked) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          simulateFailure: checked,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className='grid gap-4 md:grid-cols-3'>
-                <div className='space-y-2'>
-                  <Label htmlFor='erp-secret'>
-                    {t('integrations.secretHeader')}
-                  </Label>
-                  <Input
-                    id='erp-secret'
-                    value={secretHeader}
-                    onChange={(e) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        secretHeader: e.target.value,
-                      }))
-                    }
-                    placeholder='Optional X-Integration-Secret'
-                  />
-                </div>
-                <div className='flex items-center justify-between rounded-md border p-3'>
-                  <Label htmlFor='erp-enabled'>
-                    {t('integrations.enabled')}
-                  </Label>
-                  <Switch
-                    id='erp-enabled'
-                    checked={enabled}
-                    onCheckedChange={(checked) =>
-                      setDraft((prev) => ({ ...prev, enabled: checked }))
-                    }
-                  />
-                </div>
-                <div className='flex items-center justify-between rounded-md border p-3'>
-                  <Label htmlFor='erp-fail'>
-                    {t('integrations.simulateFailure')}
-                  </Label>
-                  <Switch
-                    id='erp-fail'
-                    checked={simulateFailure}
-                    onCheckedChange={(checked) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        simulateFailure: checked,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-              {message ? (
-                <Alert>
-                  <AlertDescription>{message}</AlertDescription>
-                </Alert>
-              ) : null}
-              {errorMsg ? (
-                <Alert variant='destructive'>
-                  <AlertDescription>{errorMsg}</AlertDescription>
-                </Alert>
-              ) : null}
-              <PendingButton type='submit' busy={saving}>
-                {t('crm.save')}
-              </PendingButton>
+                {message ? (
+                  <Alert>
+                    <AlertDescription>{message}</AlertDescription>
+                  </Alert>
+                ) : null}
+                {errorMsg ? (
+                  <Alert variant='destructive'>
+                    <AlertDescription>{errorMsg}</AlertDescription>
+                  </Alert>
+                ) : null}
+              </fieldset>
+              {configure.can && (
+                <PendingButton type='submit' busy={saving}>
+                  {t('crm.save')}
+                </PendingButton>
+              )}
             </form>
           )}
         </CardContent>
@@ -320,7 +328,7 @@ export default function ExternalIntegrationsSettingsPage() {
                       {delivery.externalReference ?? '—'}
                     </TableCell>
                     <TableCell className='text-right'>
-                      {delivery.status === 'failed' ? (
+                      {sync.can && delivery.status === 'failed' ? (
                         <Button
                           size='sm'
                           variant='outline'

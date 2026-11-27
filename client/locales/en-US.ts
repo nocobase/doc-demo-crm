@@ -7,6 +7,15 @@ import type { LocaleResource } from '@nocobase/i18n';
 import systemEnUS from './system/en-US.js';
 
 const enUS = {
+  dailyReports: {
+    title: 'Sales activity reports',
+    description: 'Latest 30 reported days · {{timezone}}',
+    date: 'Report date',
+    customers: 'New customers',
+    opportunities: 'New opportunities',
+    followUps: 'Follow-ups recorded',
+    empty: 'The first daily report will appear after the schedule runs.',
+  },
   crmAssistant: {
     models: 'AI models',
     knowledge: 'Product knowledge',
@@ -176,6 +185,10 @@ const enUS = {
     failed: 'The operation failed. Check your access and try again.',
     uploadHint:
       'Upload up to 10 files, 5 MB each. Save to attach them to this customer. Cancelled uploads remain private until administrator cleanup.',
+    draftQuotation: 'Draft quotation preview',
+    downloadDraft: 'Download draft DOCX',
+    draftHint:
+      'The preview uses the latest saved quantities, prices and discounts.',
     quotation: 'Quotation document',
     generate: 'Generate DOCX',
     confirmFirst: 'Confirm this quotation before generating the document.',
@@ -186,7 +199,7 @@ const enUS = {
     templateDescription:
       'Fixed English DOCX · revision {{revision}}. Template changes require a new application version.',
     storageDescription:
-      'Private local storage · {{size}} MB per attachment · {{count}} files per submission. Each download checks current customer access.',
+      'Storage disk: {{disk}} · {{size}} MB per attachment · {{count}} files per submission. Each download checks current customer access.',
     cleanup: 'Unlinked upload cleanup',
     cleanupHint:
       'Only unlinked uploads older than {{hours}} hours appear here. Removing them permanently deletes their stored bytes; attached and issued files are excluded.',
@@ -247,6 +260,32 @@ const enUS = {
     open: 'Open quotation',
   },
   crmAccess: {
+    submitted: 'My submissions',
+    viewImportsDescription: 'Read import batches and their error reports.',
+    create: 'Create',
+    edit: 'Edit',
+    attachFileDescription: 'Attach files to the selected customer.',
+    removeFileDescription: 'Remove an attachment from the selected customer.',
+    scheduleReminderDescription: 'Schedule a customer reminder.',
+    completeReminderDescription: 'Mark a customer reminder as completed.',
+    cancelReminderDescription: 'Cancel a customer reminder.',
+    importCustomersDescription:
+      'Submit customer imports and inspect personal import batches.',
+    useAssistantDescription:
+      'Generate a follow-up draft using accessible customer history.',
+    submitQuoteDescription: 'Submit a quotation for approval.',
+    withdrawQuoteDescription: 'Withdraw a pending quotation.',
+    approveQuoteDescription: 'Approve an assigned quotation task.',
+    rejectQuoteDescription: 'Reject an assigned quotation task.',
+    returnQuoteDescription: 'Return an assigned quotation for revision.',
+    issueQuoteDescription: 'Issue a document for a confirmed quotation.',
+    viewCustomerDescription: 'Read customers in the selected scope.',
+    viewContactsDescription: 'Read contacts in the selected scope.',
+    viewFollowUpsDescription: 'Read follow-ups in the selected scope.',
+    viewOpportunitiesDescription: 'Read opportunities in the selected scope.',
+    viewQuotesDescription:
+      'Read quotations and their lines in the selected scope.',
+
     records: 'Customer records',
     view: 'View',
     owned: 'Customers I own',

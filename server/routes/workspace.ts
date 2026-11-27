@@ -1,4 +1,4 @@
-import { authorizeCrm } from '../providers/crm-permissions.js';
+import { summaryReads } from '../providers/crm-permissions.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
   authenticationToken,
@@ -35,7 +35,7 @@ export default defineApiRoutes(async (app: Application) => {
     async (c) => {
       const service = new WorkspaceService(
         connection,
-        await authorizeCrm(c.get('authz'), 'view'),
+        await summaryReads(c.get('authz')),
       );
       return c.json({ data: await service.read() });
     },

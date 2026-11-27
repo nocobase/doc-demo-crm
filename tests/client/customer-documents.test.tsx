@@ -1,7 +1,9 @@
 import { answerApi } from '@nocobase/app-testing/client';
 import { screen } from '@testing-library/react';
 import { Route, Routes } from 'react-router';
-import { expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import * as downloads from '../../client/pages/documents/download.js';
+import { expect, it, vi } from 'vitest';
 import { renderCrmClient } from '../helpers/crm-client.js';
 import QuoteDocument from '../../client/pages/documents/quote-document.js';
 import { CustomerAttachments } from '../../client/pages/documents/files.js';
@@ -38,6 +40,45 @@ it('withholds formal generation for an unconfirmed quotation', async () => {
     screen.queryByRole('button', { name: 'Generate DOCX' }),
   ).not.toBeInTheDocument();
 });
+it('downloads the live draft from its own action and offers no formal issuance', async () => {
+  const download = vi
+    .spyOn(downloads, 'downloadFile')
+    .mockResolvedValue(undefined);
+  try {
+    await renderCrmClient(
+      <Routes>
+        <Route
+          path='/quotes/:customerId/:opportunityId/:quoteId'
+          element={<QuoteDocument revision={0} />}
+        />
+      </Routes>,
+      {
+        route: '/quotes/customer/opportunity/quote',
+        fetch: answerApi(() => ({
+          data: { draft: true, confirmed: false, document: null },
+        })),
+        namespace,
+        namespaces,
+      },
+    );
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Download draft DOCX' }),
+    );
+    expect(download).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filename: 'draft-quotation-quote.docx',
+        contentUrl: expect.stringContaining(
+          '/api/crmFiles/quotes/customer/opportunity/quote/draft',
+        ),
+      }),
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Generate DOCX' }),
+    ).not.toBeInTheDocument();
+  } finally {
+    download.mockRestore();
+  }
+});
 it('shared customer attachments omit write actions but preserve the read surface', async () => {
   await renderCrmClient(
     <CustomerAttachments customerId='customer' revision={0} />,
@@ -46,7 +87,7 @@ it('shared customer attachments omit write actions but preserve the read surface
       namespace,
       namespaces,
     },
-    { customerAccess: { edit: false }, recordActions: ['view'] },
+    { customerAccess: { edit: false }, recordActions: ['viewCustomer'] },
   );
   expect(
     await screen.findByRole('heading', { name: 'Attachments' }),

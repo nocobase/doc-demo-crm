@@ -1,3 +1,5 @@
+import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { crmOperations } from '../../../server/crm-operations.js';
 import { resolveListState } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useMemo, useState } from 'react';
@@ -95,23 +97,31 @@ export default function CustomersPage() {
     ],
     [t],
   );
-  const create = access.access?.createCustomer ? (
-    <div className='flex items-center gap-2'>
-      <Button
-        variant='outline'
-        nativeButton={false}
-        render={<Link to='imports' />}
-      >
-        {t('crmImports.openButton')}
-      </Button>
-      <Button
-        nativeButton={false}
-        render={<Link to={{ pathname: 'new', search: params.toString() }} />}
-      >
-        {t('crm.newCustomer')}
-      </Button>
-    </div>
-  ) : undefined;
+  const importAccess = useCan(crmOperations.viewImports);
+  const create =
+    access.access?.createCustomer || importAccess.can ? (
+      <div className='flex items-center gap-2'>
+        {importAccess.can && (
+          <Button
+            variant='outline'
+            nativeButton={false}
+            render={<Link to='imports' />}
+          >
+            {t('crmImports.openButton')}
+          </Button>
+        )}
+        {access.access?.createCustomer && (
+          <Button
+            nativeButton={false}
+            render={
+              <Link to={{ pathname: 'new', search: params.toString() }} />
+            }
+          >
+            {t('crm.newCustomer')}
+          </Button>
+        )}
+      </div>
+    ) : undefined;
   const updateFilter = (key: string, value: string) => {
     setParams((old) => {
       const next = new URLSearchParams(old);

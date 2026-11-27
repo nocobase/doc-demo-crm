@@ -1,3 +1,4 @@
+import { SalesService } from '../providers/sales.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
   authenticationToken,
@@ -29,7 +30,7 @@ import {
   CustomerInput,
   ListInput,
 } from '../providers/crm.js';
-import { optionalPolicies } from '../providers/crm-imports.js';
+
 import {
   ConflictMode,
   IntakeValidationError,
@@ -41,7 +42,12 @@ import {
   SyncTargetView,
   crmIntegrationsToken,
 } from '../providers/crm-integrations.js';
-import { authorizeCrm } from '../providers/crm-permissions.js';
+import {
+  authorizeCrm,
+  customerReads,
+  scopedRepository,
+  optionalCrm,
+} from '../providers/crm-permissions.js';
 
 const Header = z.object({ 'idempotency-key': z.string() });
 const IdParam = z.object({ id: z.uuid() });
@@ -134,7 +140,7 @@ export default defineApiRoutes(async (app: Application) => {
     }),
     apiValidator('query', ListInput),
     async (c) => {
-      const policies = await authorizeCrm(c.get('authz'), 'view');
+      const policies = await authorizeCrm(c.get('authz'), 'viewCustomer');
       return c.json(
         await new CrmService(connection, policies).list(c.req.valid('query')),
       );
@@ -158,16 +164,18 @@ export default defineApiRoutes(async (app: Application) => {
     async (c) => {
       const input = c.req.valid('json');
       const authzContext = c.get('authz');
-      const view = await authorizeCrm(authzContext, 'view');
+      const view = input.contact
+        ? await customerReads(authzContext, 'viewContacts')
+        : await authorizeCrm(authzContext, 'viewCustomer');
       const createCustomer = await authorizeCrm(authzContext, 'createCustomer');
       const editCustomer =
         input.conflictMode === 'update'
           ? await authorizeCrm(authzContext, 'editCustomer')
-          : await optionalPolicies(authzContext, 'editCustomer');
+          : await optionalCrm(authzContext, 'editCustomer');
       const addContact = input.contact
         ? await authorizeCrm(authzContext, 'addContact')
-        : await optionalPolicies(authzContext, 'addContact');
-      const editContact = await optionalPolicies(authzContext, 'editContact');
+        : await optionalCrm(authzContext, 'addContact');
+      const editContact = await optionalCrm(authzContext, 'editContact');
 
       const userId = c.get('auth')!.user.id;
       const notesWithSource = input.notes
@@ -184,7 +192,7 @@ export default defineApiRoutes(async (app: Application) => {
           await authorizeCrm(authzContext, 'createCustomer');
         },
         authorizeReplay: async () => {
-          await authorizeCrm(authzContext, 'view');
+          await authorizeCrm(authzContext, 'viewCustomer');
         },
         execute: async (tx) => {
           try {
@@ -233,8 +241,25 @@ export default defineApiRoutes(async (app: Application) => {
       responses: { 200: dataResponse(SyncTargetView), ...apiErrorResponses },
     }),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'read', 'crm.integrations');
-      return c.json({ data: await integrations.getTarget() });
+      const policies = await authorizeCrm(c.get('authz'), 'readIntegrations');
+      const target = await integrations.getTarget(policies);
+      const configure = await optionalCrm(
+        c.get('authz'),
+        'configureIntegrations',
+      );
+      const canReadSecret =
+        configure?.crmSyncTargets &&
+        (await scopedRepository(
+          connection,
+          configure,
+          'crmSyncTargets',
+        ).findOne({ filter: { id: target.id } }));
+      return c.json({
+        data: {
+          ...target,
+          secretHeader: canReadSecret ? target.secretHeader : '',
+        },
+      });
     },
   );
 
@@ -248,9 +273,12 @@ export default defineApiRoutes(async (app: Application) => {
     }),
     apiValidator('json', SyncTargetInput),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'configure', 'crm.integrations');
+      const policies = await authorizeCrm(
+        c.get('authz'),
+        'configureIntegrations',
+      );
       return c.json({
-        data: await integrations.updateTarget(c.req.valid('json')),
+        data: await integrations.updateTarget(policies, c.req.valid('json')),
       });
     },
   );
@@ -265,8 +293,11 @@ export default defineApiRoutes(async (app: Application) => {
     }),
     apiValidator('query', DeliveriesQuery),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'read', 'crm.integrations');
-      const data = await integrations.listDeliveries(c.req.valid('query'));
+      const policies = await authorizeCrm(c.get('authz'), 'readIntegrations');
+      const data = await integrations.listDeliveries(
+        policies,
+        c.req.valid('query'),
+      );
       return c.json({ data, meta: { total: data.length } });
     },
   );
@@ -285,9 +316,10 @@ export default defineApiRoutes(async (app: Application) => {
     }),
     apiValidator('param', IdParam),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'sync', 'crm.integrations');
-      const viewPolicies = await authorizeCrm(c.get('authz'), 'view');
+      const policies = await authorizeCrm(c.get('authz'), 'syncIntegrations');
+      const viewPolicies = await customerReads(c.get('authz'), 'viewQuotes');
       const result = await integrations.syncConfirmedQuote(
+        policies,
         viewPolicies,
         c.req.valid('param').id,
       );
@@ -310,9 +342,13 @@ export default defineApiRoutes(async (app: Application) => {
     }),
     apiValidator('param', IdParam),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'sync', 'crm.integrations');
-      const viewPolicies = await authorizeCrm(c.get('authz'), 'view');
+      const policies = await authorizeCrm(c.get('authz'), 'syncIntegrations');
+      const viewPolicies = await customerReads(
+        c.get('authz'),
+        'viewOpportunities',
+      );
       const result = await integrations.syncWonOpportunity(
+        policies,
         viewPolicies,
         c.req.valid('param').id,
       );
@@ -331,8 +367,47 @@ export default defineApiRoutes(async (app: Application) => {
     }),
     apiValidator('param', IdParam),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'sync', 'crm.integrations');
+      const policies = await authorizeCrm(c.get('authz'), 'syncIntegrations');
+      const row = await scopedRepository(
+        connection,
+        policies,
+        'crmSyncDeliveries',
+      ).findOne({ filter: { id: c.req.valid('param').id } });
+      if (!row)
+        throw new ApiError({
+          status: 'NOT_FOUND',
+          domain: 'crm',
+          reason: 'SYNC_DELIVERY_NOT_FOUND',
+          message: 'Sync delivery not found.',
+        });
+      const customerId = z.string().parse(row.customerId);
+      const entityId = z.string().parse(row.entityId);
+      const quote = row.entityType === 'quote';
+      const reads = await customerReads(
+        c.get('authz'),
+        quote ? 'viewQuotes' : 'viewOpportunities',
+      );
+      await new CrmService(connection, reads).get(customerId);
+      const record = await scopedRepository(
+        connection,
+        reads,
+        quote ? 'crmQuotes' : 'crmOpportunities',
+      ).findOne({ filter: { id: entityId, customerId } });
+      if (!record)
+        throw new ApiError({
+          status: 'NOT_FOUND',
+          domain: 'crm',
+          reason: 'CRM_RECORD_NOT_FOUND',
+          message: 'Sync source not found.',
+        });
+      if (quote)
+        await new SalesService(connection, reads).quote(
+          customerId,
+          z.string().parse(record.opportunityId),
+          entityId,
+        );
       const delivery = await integrations.retryDelivery(
+        policies,
         c.req.valid('param').id,
       );
       return c.json({ data: delivery }, 202);

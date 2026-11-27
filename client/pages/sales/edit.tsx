@@ -36,7 +36,7 @@ import {
 } from '#components/ui/alert-dialog';
 import { Loading } from '#components/loading';
 import { useListData } from '#hooks/use-list-data';
-import { useCrmAccess, useCustomerOperation } from '#hooks/use-crm-access';
+import { useCustomerOperation } from '#hooks/use-crm-access';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { ReadError } from '../customers/shared.js';
 import {
@@ -76,7 +76,6 @@ export default function SalesEditor() {
       ? 'quote'
       : 'opportunity';
   const editing = location.pathname.endsWith('/edit');
-  const globalAccess = useCrmAccess();
   const recordAccess = useCustomerOperation(
     params.customerId,
     kind === 'quote'
@@ -94,18 +93,14 @@ export default function SalesEditor() {
     },
     { enabled: kind === 'product' },
   );
-  const access = kind === 'product' ? globalAccess : recordAccess;
   const allowed =
-    kind === 'product'
-      ? globalAccess.access &&
-        (globalAccess.access.productActions?.[editing ? 'edit' : 'create'] ??
-          productPermission.can) &&
-        productPermission.can
-      : recordAccess.allowed;
+    kind === 'product' ? productPermission.can : recordAccess.allowed;
   const accessLoading =
-    access.loading || (kind === 'product' && productPermission.isPending);
+    kind === 'product' ? productPermission.isPending : recordAccess.loading;
   const accessError =
-    access.error ?? (kind === 'product' ? productPermission.error : undefined);
+    kind === 'product' ? productPermission.error : recordAccess.error;
+  const reloadAccess =
+    kind === 'product' ? productPermission.retry : recordAccess.reload;
   const productRequest = useListData<{ data: Product }>(
     `crmSales/products/${params.productId}`,
     { active: kind === 'product' && editing && Boolean(allowed) },
@@ -114,13 +109,7 @@ export default function SalesEditor() {
     return (
       <RouteDialog title={t('sales.products')}>
         {accessError ? (
-          <ReadError
-            error={accessError}
-            retry={() => {
-              access.reload();
-              void productPermission.retry();
-            }}
-          />
+          <ReadError error={accessError} retry={reloadAccess} />
         ) : accessLoading ? (
           <Loading />
         ) : (

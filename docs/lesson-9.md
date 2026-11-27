@@ -1,6 +1,6 @@
 # Lesson 9 · Customer attachments and quotation documents
 
-Start from `lesson-8`. Back up the database, configuration and storage together. Install locked dependencies, inspect pending migrations, apply them and start the app:
+To try the complete CRM, use the [installation and sample data instructions](../README.MD#install-and-run) on `main`. For an upgrade from `lesson-8`, back up the database, configuration and storage together. Install locked dependencies, inspect pending migrations, apply them and start the app:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -13,7 +13,11 @@ Use the printed Local URL. This stage adds two new tables without changing earli
 
 Customer details now has an Attachments tab. Authorized owners/managers upload up to ten files per save, each at most 5 MB, then Save to associate them. Uploads are private staging until saved. Cancelled selections are not customer attachments. Shared readers may preview/download but cannot attach/remove. Every content request rechecks customer scope, including after transfer or revoked sharing. Removing an attachment retains its customer association as a tombstone; it cannot become uploader-private again or be reattached. Content responses prohibit caching and active document execution.
 
-Confirmed quotations offer Generate DOCX. The fixed English Carbone 3.9.2 template is in `docs/templates/quotation-v1.docx`, with embedded server bytes for packaging. Same-format rendering requires no PDF converter. Lines/prices/discounts/totals come from the confirmed snapshot; customer/opportunity names are captured at first issue. A unique quotation version, shared quote lock and standard receipt transaction make repeated/concurrent requests return the same file. Later catalogue or name changes do not alter its bytes. Native FileRepository handles storage and native file UI previews DOCX locally.
+On a development installation, run `pnpm nocobase db sample --json` to load the optional samples. As a sales manager, assign the sample customer **Northstar Labs** to the salesperson. Open **Customers → Northstar Labs → Opportunities → Northstar sales workspace → Northstar team rollout** as that salesperson. If the sample is already in use, create a draft under a customer you own with 12 CRM workspace licenses at $120 each (10% discount) and one $800 Implementation workshop (0% discount).
+
+From the saved **Draft**, select **Download draft DOCX** and open it. Check the **DRAFT QUOTATION** heading, the $1,296 and $800 lines and the $2,096 total. Edit the license quantity to 13, save and download again. The new total is $2,204. Each download reads the current authorized quote and lines. The quote stays in Draft, with no approval submission or issued file.
+
+Confirmed quotations offer **Generate DOCX**. Both outputs use Carbone and the [same English DOCX template](templates/quotation-v2.docx), embedded for packaging. Official lines, prices, discounts and totals come from the confirmed snapshot. Customer and opportunity names are captured at first issue. A unique quotation version, shared quote lock and receipt transaction make repeated or concurrent requests return the same file. Later catalog and name changes do not alter its bytes. Native FileRepository stores the official file, and the file viewer opens it from the quotation page.
 
 System settings → Files and quotation documents shows the actual template/storage policy and paged unlinked uploads older than 24 hours. Cleanup claims a file before deleting its bytes, blocking a simultaneous attach. Physical failure leaves Cleanup pending; retry completes the same claim. Attached, removed and issued files never enter this directory. Native metadata endpoints expose only a caller's unlinked staging records; there is no generic file update/delete bypass.
 

@@ -427,7 +427,7 @@ it('checks each operation independently rather than assuming editable means ever
     `/customers/${customer.id}/details/contacts`,
     'en-US',
     {
-      recordActions: ['view', 'addContact'],
+      recordActions: ['viewCustomer', 'addContact'],
       customerAccess: {
         edit: false,
         actions: { editCustomer: false, addContact: true },
@@ -443,7 +443,7 @@ it('checks each operation independently rather than assuming editable means ever
 });
 it('blocks the new-customer URL when a page-only reader has no create operation', async () => {
   await mount(detailApi(), '/customers/new', 'en-US', {
-    recordActions: ['view'],
+    recordActions: ['viewCustomer'],
   });
   expect(
     await screen.findByText('You do not have permission to make this change.'),

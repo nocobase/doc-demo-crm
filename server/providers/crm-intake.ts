@@ -1,3 +1,4 @@
+import { CrmService } from './crm.js';
 import { randomUUID } from 'node:crypto';
 import type { DatabaseConnection, RepositoryRecord } from '@nocobase/db';
 import { z } from 'zod';
@@ -394,6 +395,7 @@ async function upsertContact(
         'You do not have permission to update contacts.',
       );
     }
+    await new CrmService(tx, policies.editContact).get(customerId);
     const updated = (
       await scopedRepository(tx, policies.editContact, 'crmContacts').updateOne(
         {
@@ -416,6 +418,7 @@ async function upsertContact(
       'You do not have permission to add contacts.',
     );
   }
+  await new CrmService(tx, policies.addContact).get(customerId);
   const created = (
     await scopedRepository(tx, policies.addContact, 'crmContacts').createOne({
       values: {

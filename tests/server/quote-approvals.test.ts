@@ -1,5 +1,9 @@
 import { authorizationToken } from '@nocobase/app-plugin-authorization/server';
-import { crmRecords } from '../../server/providers/crm-permissions.js';
+import {
+  crmCustomers,
+  crmQuotes,
+  crmOpportunities,
+} from '../../server/providers/crm-permissions.js';
 import { randomUUID } from 'node:crypto';
 import {
   DEFAULT_ADMIN_CREDENTIALS,
@@ -159,7 +163,7 @@ test('submits frozen quotes, manages tasks and rejects invalid decisions without
         }),
       )
     ).status,
-  ).toBe(404);
+  ).toBe(403);
   expect(
     (
       await manager.session.fetch(
@@ -415,18 +419,13 @@ test('submits frozen quotes, manages tasks and rejects invalid decisions without
     .permissionSets.update('crm-sales-manager', {
       key: 'crm-sales-manager',
       grants: [
-        crmRecords
+        crmCustomers.reference().grant({ view: { customers: 'allRecords' } }),
+        crmOpportunities
           .reference()
-          .grant({
-            view: {
-              customers: 'allRecords',
-              contacts: 'allRecords',
-              followUps: 'allRecords',
-              opportunities: 'allRecords',
-              quotes: 'allRecords',
-              lines: 'allRecords',
-            },
-          }),
+          .grant({ view: { opportunities: 'allRecords' } }),
+        crmQuotes
+          .reference()
+          .grant({ view: { quotes: 'allRecords', lines: 'allRecords' } }),
       ],
     });
   expect((await manager.session.fetch(permissionPath)).status).toBe(200);

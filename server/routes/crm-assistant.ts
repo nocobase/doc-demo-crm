@@ -85,7 +85,7 @@ export default defineApiRoutes(async (app: Application) => {
   router.get(
     '/models',
     async (c, next) => {
-      await authorizeCrm(c.get('authz'), 'view');
+      await authorizeCrm(c.get('authz'), 'useAssistant');
       await next();
     },
     describeRoute({
@@ -120,7 +120,7 @@ export default defineApiRoutes(async (app: Application) => {
   router.post(
     '/customers/:id/follow-up-draft',
     async (c, next) => {
-      await authorizeCrm(c.get('authz'), 'view');
+      await authorizeCrm(c.get('authz'), 'useAssistant');
       await next();
     },
     describeRoute({
@@ -137,7 +137,11 @@ export default defineApiRoutes(async (app: Application) => {
       const authzCtx = c.get('authz');
 
       // Enforce current customer access before touching any model service.
-      const viewPolicies = await authorizeCrm(authzCtx, 'view');
+      const viewPolicies = await authorizeCrm(authzCtx, 'viewCustomer');
+      await new CrmService(
+        connection,
+        await authorizeCrm(authzCtx, 'useAssistant'),
+      ).get(customerId);
       const customer = await new CrmService(connection, viewPolicies).get(
         customerId,
       );

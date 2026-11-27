@@ -134,6 +134,9 @@ importers:
       zod:
         specifier: ^4.6.6
         version: 4.6.7
+      dayjs:
+        specifier: ^1.10.7
+        version: 1.11.23
     devDependencies:
       '@ai-sdk/react':
         specifier: 4.0.131
@@ -279,9 +282,6 @@ importers:
       cn:
         specifier: ^0.4.0
         version: 0.4.0
-      dayjs:
-        specifier: ^1.10.7
-        version: 1.11.23
       dingtalk-jsapi:
         specifier: 3.1.1
         version: 3.1.1

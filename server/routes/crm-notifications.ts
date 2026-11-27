@@ -35,12 +35,10 @@ export default defineApiRoutes((app: Application) => {
     app.container.resolve(authenticationToken).required({ scopedKeys: false }),
     app.container.resolve(authorizationToken).middleware(),
     async (c, next) => {
-      await c
-        .get('authz')
-        .require({
-          resource: { type: 'page', id: 'notification.logs' },
-          action: 'access',
-        });
+      await c.get('authz').require({
+        resource: { type: 'settings', id: 'crm.notificationEvents' },
+        action: 'read',
+      });
       await next();
     },
   );

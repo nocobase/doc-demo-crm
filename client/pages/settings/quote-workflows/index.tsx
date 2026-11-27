@@ -69,7 +69,7 @@ export function DefinitionDetail() {
   const { t } = useTranslation();
   const request = useListData<{ data: Definition }>('crmWorkflows/definition');
   const permission = useCan({
-    resource: { type: 'composite', id: 'crm.workflow' },
+    resource: { type: 'settings', id: 'crm.workflow' },
     action: 'configure',
   });
   const inputRef = useRef<HTMLInputElement>(null);

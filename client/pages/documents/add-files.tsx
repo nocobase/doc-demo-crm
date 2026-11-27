@@ -51,7 +51,7 @@ export default function AddFiles() {
   const { reload } = useOutletContext<CustomerContext>();
   const navigate = useNavigate();
   const location = useLocation();
-  const access = useCustomerOperation(customerId, 'editCustomer');
+  const access = useCustomerOperation(customerId, 'attachFile');
   const formId = useId();
   const [files, setFiles] = useState<readonly FileRecord[]>([]);
   const [status, setStatus] = useState<FileUploadStatus>('idle');

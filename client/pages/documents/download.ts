@@ -1,5 +1,7 @@
 import type { FileRecord } from '#extensions/nocobase-file-component-ui/index';
-export async function downloadFile(file: FileRecord) {
+export async function downloadFile(
+  file: Pick<FileRecord, 'contentUrl' | 'filename' | 'mimeType'>,
+) {
   if (!file.contentUrl) throw new Error('File unavailable');
   const response = await fetch(file.contentUrl, { credentials: 'same-origin' });
   if (

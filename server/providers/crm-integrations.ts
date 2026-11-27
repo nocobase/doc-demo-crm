@@ -192,41 +192,68 @@ export class CrmIntegrationsService {
     }
   }
 
-  async getTarget() {
-    return this.ensureDefaultTarget();
+  async getTarget(policies: CrmPolicies) {
+    await this.ensureDefaultTarget();
+    const target = await scopedRepository(
+      this.connection(),
+      policies,
+      'crmSyncTargets',
+    ).findOne({ filter: { key: DEFAULT_ERP_TARGET_KEY } });
+    if (!target)
+      throw new ApiError({
+        status: 'NOT_FOUND',
+        domain: 'crm',
+        reason: 'SYNC_TARGET_NOT_FOUND',
+        message: 'Integration target not found.',
+      });
+    return formatTarget(target);
   }
 
-  async updateTarget(input: z.infer<typeof SyncTargetInput>) {
-    const current = await this.ensureDefaultTarget();
+  async updateTarget(
+    policies: CrmPolicies,
+    input: z.infer<typeof SyncTargetInput>,
+  ) {
+    const current = await this.getTarget(policies);
     const updated = (
-      await this.connection()
-        .repository('crmSyncTargets')
-        .updateOne({
-          filter: { id: current.id },
-          values: {
-            ...input,
-            updatedAt: new Date().toISOString(),
-          },
-        })
+      await scopedRepository(
+        this.connection(),
+        policies,
+        'crmSyncTargets',
+      ).updateOne({
+        filter: { id: current.id },
+        values: {
+          ...input,
+          updatedAt: new Date().toISOString(),
+        },
+      })
     ).record;
     return formatTarget(updated);
   }
 
-  async listDeliveries(filters?: { entityType?: string; entityId?: string }) {
+  async listDeliveries(
+    policies: CrmPolicies,
+    filters?: { entityType?: string; entityId?: string },
+  ) {
     const filter: Record<string, string> = {};
     if (filters?.entityType) filter.entityType = filters.entityType;
     if (filters?.entityId) filter.entityId = filters.entityId;
-    const rows = await this.connection()
-      .repository('crmSyncDeliveries')
-      .findMany({
-        ...(Object.keys(filter).length > 0 ? { filter } : {}),
-        limit: 100,
-        sort: (s) => [s.field('createdAt').desc(), s.field('id').desc()],
-      });
+    const rows = await scopedRepository(
+      this.connection(),
+      policies,
+      'crmSyncDeliveries',
+    ).findMany({
+      ...(Object.keys(filter).length > 0 ? { filter } : {}),
+      limit: 100,
+      sort: (s) => [s.field('createdAt').desc(), s.field('id').desc()],
+    });
     return rows.map(formatDelivery);
   }
 
-  async syncConfirmedQuote(viewPolicies: CrmPolicies, quoteId: string) {
+  async syncConfirmedQuote(
+    syncPolicies: CrmPolicies,
+    viewPolicies: CrmPolicies,
+    quoteId: string,
+  ) {
     const connection = this.connection();
     const quote = await scopedRepository(
       connection,
@@ -268,6 +295,13 @@ export class CrmIntegrationsService {
       }),
     ]);
 
+    if (!customer || !opportunity)
+      throw new ApiError({
+        status: 'NOT_FOUND',
+        domain: 'crm',
+        reason: 'CRM_RECORD_NOT_FOUND',
+        message: 'Quotation parent not found.',
+      });
     const idempotencyKey = `erp-sync:quote:${quoteId}`;
     const payload = {
       eventType: 'quote.confirmed',
@@ -286,23 +320,19 @@ export class CrmIntegrationsService {
           amount: Number(line.amountCents) / 100,
         })),
       },
-      opportunity: opportunity
-        ? {
-            id: opportunityId,
-            name: asString(opportunity.name),
-            stage: asString(opportunity.stage),
-          }
-        : null,
-      customer: customer
-        ? {
-            id: customerId,
-            name: asString(customer.name),
-            industry: asString(customer.industry),
-          }
-        : null,
+      opportunity: {
+        id: opportunityId,
+        name: asString(opportunity.name),
+        stage: asString(opportunity.stage),
+      },
+      customer: {
+        id: customerId,
+        name: asString(customer.name),
+        industry: asString(customer.industry),
+      },
     };
 
-    return this.queueDelivery({
+    return this.queueDelivery(syncPolicies, {
       idempotencyKey,
       entityType: 'quote',
       entityId: quoteId,
@@ -313,7 +343,11 @@ export class CrmIntegrationsService {
     });
   }
 
-  async syncWonOpportunity(viewPolicies: CrmPolicies, opportunityId: string) {
+  async syncWonOpportunity(
+    syncPolicies: CrmPolicies,
+    viewPolicies: CrmPolicies,
+    opportunityId: string,
+  ) {
     const connection = this.connection();
     const opportunity = await scopedRepository(
       connection,
@@ -344,6 +378,13 @@ export class CrmIntegrationsService {
       'crmCustomers',
     ).findOne({ filter: { id: customerId } });
 
+    if (!customer)
+      throw new ApiError({
+        status: 'NOT_FOUND',
+        domain: 'crm',
+        reason: 'CRM_RECORD_NOT_FOUND',
+        message: 'Opportunity parent not found.',
+      });
     const idempotencyKey = `erp-sync:opportunity:${opportunityId}`;
     const payload = {
       eventType: 'opportunity.won',
@@ -353,16 +394,14 @@ export class CrmIntegrationsService {
         name: asString(opportunity.name),
         stage: asString(opportunity.stage),
       },
-      customer: customer
-        ? {
-            id: customerId,
-            name: asString(customer.name),
-            industry: asString(customer.industry),
-          }
-        : null,
+      customer: {
+        id: customerId,
+        name: asString(customer.name),
+        industry: asString(customer.industry),
+      },
     };
 
-    return this.queueDelivery({
+    return this.queueDelivery(syncPolicies, {
       idempotencyKey,
       entityType: 'opportunity',
       entityId: opportunityId,
@@ -373,16 +412,19 @@ export class CrmIntegrationsService {
     });
   }
 
-  private async queueDelivery(input: {
-    readonly idempotencyKey: string;
-    readonly entityType: 'quote' | 'opportunity';
-    readonly entityId: string;
-    readonly customerId: string;
-    readonly entityTitle: string;
-    readonly eventType: 'quote.confirmed' | 'opportunity.won';
-    readonly payload: Record<string, unknown>;
-  }) {
-    const target = await this.ensureDefaultTarget();
+  private async queueDelivery(
+    policies: CrmPolicies,
+    input: {
+      readonly idempotencyKey: string;
+      readonly entityType: 'quote' | 'opportunity';
+      readonly entityId: string;
+      readonly customerId: string;
+      readonly entityTitle: string;
+      readonly eventType: 'quote.confirmed' | 'opportunity.won';
+      readonly payload: Record<string, unknown>;
+    },
+  ) {
+    const target = await this.getTarget(policies);
     if (!target.enabled) {
       throw new ApiError({
         status: 'FAILED_PRECONDITION',
@@ -392,7 +434,11 @@ export class CrmIntegrationsService {
       });
     }
 
-    const repo = this.connection().repository('crmSyncDeliveries');
+    const repo = scopedRepository(
+      this.connection(),
+      policies,
+      'crmSyncDeliveries',
+    );
     const existing = await repo.findOne({
       filter: { idempotencyKey: input.idempotencyKey },
     });
@@ -401,7 +447,10 @@ export class CrmIntegrationsService {
         return { delivery: formatDelivery(existing), replayed: true };
       }
       if (asString(existing.status) === 'failed') {
-        const retried = await this.retryDelivery(asString(existing.id));
+        const retried = await this.retryDelivery(
+          policies,
+          asString(existing.id),
+        );
         return { delivery: retried, replayed: false };
       }
       return { delivery: formatDelivery(existing), replayed: true };
@@ -438,8 +487,12 @@ export class CrmIntegrationsService {
     return { delivery: formatDelivery(created), replayed: false };
   }
 
-  async retryDelivery(deliveryId: string) {
-    const repo = this.connection().repository('crmSyncDeliveries');
+  async retryDelivery(policies: CrmPolicies, deliveryId: string) {
+    const repo = scopedRepository(
+      this.connection(),
+      policies,
+      'crmSyncDeliveries',
+    );
     const existing = await repo.findOne({ filter: { id: deliveryId } });
     if (!existing) {
       throw new ApiError({
@@ -665,15 +718,21 @@ export default class CrmIntegrationsProvider extends ServiceProvider<Application
         scopes.groups.add({
           id: 'crm.leads',
           category: 'business',
-          title: { key: 'integrations.scopeLeadsTitle', ns: 'app' },
-          description: { key: 'integrations.scopeLeadsDesc', ns: 'app' },
+          title: { key: 'integrations.scopeLeadsTitle', ns: 'doc-demo-crm' },
+          description: {
+            key: 'integrations.scopeLeadsDesc',
+            ns: 'doc-demo-crm',
+          },
           levels: {
-            read: [{ kind: 'business', id: 'crm.records', action: 'view' }],
+            read: [
+              { kind: 'business', id: 'crm.customers', action: 'view' },
+              { kind: 'business', id: 'crm.contacts', action: 'view' },
+            ],
             write: [
-              { kind: 'business', id: 'crm.records', action: 'createCustomer' },
-              { kind: 'business', id: 'crm.records', action: 'editCustomer' },
-              { kind: 'business', id: 'crm.records', action: 'addContact' },
-              { kind: 'business', id: 'crm.records', action: 'editContact' },
+              { kind: 'business', id: 'crm.customers', action: 'create' },
+              { kind: 'business', id: 'crm.customers', action: 'edit' },
+              { kind: 'business', id: 'crm.contacts', action: 'create' },
+              { kind: 'business', id: 'crm.contacts', action: 'edit' },
             ],
           },
         }),
@@ -683,14 +742,20 @@ export default class CrmIntegrationsProvider extends ServiceProvider<Application
         scopes.groups.add({
           id: 'crm.integrations',
           category: 'business',
-          title: { key: 'integrations.scopeSyncTitle', ns: 'app' },
-          description: { key: 'integrations.scopeSyncDesc', ns: 'app' },
+          title: { key: 'integrations.scopeSyncTitle', ns: 'doc-demo-crm' },
+          description: {
+            key: 'integrations.scopeSyncDesc',
+            ns: 'doc-demo-crm',
+          },
           levels: {
             read: [
               { kind: 'business', id: 'crm.integrations', action: 'read' },
             ],
             write: [
               { kind: 'business', id: 'crm.integrations', action: 'sync' },
+              { kind: 'business', id: 'crm.customers', action: 'view' },
+              { kind: 'business', id: 'crm.opportunities', action: 'view' },
+              { kind: 'business', id: 'crm.quotes', action: 'view' },
             ],
           },
         }),
@@ -699,8 +764,11 @@ export default class CrmIntegrationsProvider extends ServiceProvider<Application
       this.releases.push(
         scopes.presets.add({
           id: 'lead-intake',
-          title: { key: 'integrations.presetLeadIntake', ns: 'app' },
-          description: { key: 'integrations.presetLeadIntakeDesc', ns: 'app' },
+          title: { key: 'integrations.presetLeadIntake', ns: 'doc-demo-crm' },
+          description: {
+            key: 'integrations.presetLeadIntakeDesc',
+            ns: 'doc-demo-crm',
+          },
           groups: {
             'crm.leads': { level: 'write' },
           },
@@ -711,8 +779,11 @@ export default class CrmIntegrationsProvider extends ServiceProvider<Application
       this.releases.push(
         scopes.presets.add({
           id: 'erp-sync',
-          title: { key: 'integrations.presetErpSync', ns: 'app' },
-          description: { key: 'integrations.presetErpSyncDesc', ns: 'app' },
+          title: { key: 'integrations.presetErpSync', ns: 'doc-demo-crm' },
+          description: {
+            key: 'integrations.presetErpSyncDesc',
+            ns: 'doc-demo-crm',
+          },
           groups: {
             'crm.leads': { level: 'read' },
             'crm.integrations': { level: 'write' },

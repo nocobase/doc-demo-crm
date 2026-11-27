@@ -36,7 +36,7 @@ async function mount(fetch: typeof globalThis.fetch, readOnly = false) {
       },
     },
     readOnly
-      ? { customerAccess: { edit: false }, recordActions: ['view'] }
+      ? { customerAccess: { edit: false }, recordActions: ['viewCustomer'] }
       : {},
   );
   return onHandled;

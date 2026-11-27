@@ -105,12 +105,12 @@ function AccessEditor({
   const api = useApiClient();
   const authorization = useAuthorizationClient();
   const assignPermission = useCan({
-    resource: { type: 'composite', id: 'crm.records' },
+    resource: { type: 'composite', id: 'crm.customers' },
     action: 'assignOwner',
   });
   const sharingPermission = useCan({
-    resource: { type: 'composite', id: 'crm.records' },
-    action: 'shareCustomer',
+    resource: { type: 'composite', id: 'crm.customers' },
+    action: 'share',
   });
   const { session } = useAuthentication();
   const toaster = useToaster();

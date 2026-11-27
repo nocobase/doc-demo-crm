@@ -17,7 +17,7 @@ export default defineSystemSettingsRoutes([
         path: '/workflows/definitions',
         auth: 'required',
         authz: {
-          resource: { type: 'composite', id: 'crm.workflow' },
+          resource: { type: 'settings', id: 'crm.workflow' },
           action: 'read',
         },
         navigation: { title: 'settings.workflows.definitions' },
@@ -36,7 +36,7 @@ export default defineSystemSettingsRoutes([
         path: '/workflows/executions',
         auth: 'required',
         authz: {
-          resource: { type: 'composite', id: 'crm.workflow' },
+          resource: { type: 'settings', id: 'crm.workflow' },
           action: 'read',
         },
         navigation: { title: 'settings.workflows.executions' },

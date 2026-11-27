@@ -10,14 +10,15 @@ do not need to follow or check out historical lessons in order.
 - **Sales workspace & customer records** (**Sales workspace**, **Customers**, **Products**): overview counts and recent activity, customer management, contacts, append-only follow-up records, opportunities, product catalogue and price-snapshot quotes.
 - **Roles, ownership & sharing** (**System settings → Users**): editable **Sales** and **Sales manager** permission sets, customer ownership assignment and read-only customer sharing.
 - **Quotation approvals & task center** (**My tasks**, **System settings → Workflow management**): discount-threshold quotation review, approve/return/reject/withdraw actions and execution history.
-- **Attachments & quotation documents** (**Customers → Attachments**, quote **Generate DOCX**, **System settings → Files and quotation documents**): access-controlled customer attachments and fixed-template DOCX generation from confirmed quotes.
+- **Attachments & quotation documents** (**Customers → Attachments**, quote **Download draft DOCX** or **Generate DOCX**, **System settings → Files and quotation documents**): access-controlled attachments, live English draft previews and issued documents from confirmed quotation snapshots.
+- **Sales activity reports** (**Sales activity reports** in the sidebar): at 01:00 Asia/Shanghai, count customers, opportunities and follow-ups created during the previous local calendar day. Administrators can inspect the schedule and its runs under **System settings → Schedules**. The CRM sales manager role can view team totals.
 - **Notifications & scheduled reminders** (in-app inbox, **Customers → Reminders**, **System settings → Notifications / Scheduled reminders**): in-app notifications for customer assignment and approval outcomes, plus scheduled follow-up and quotation deadline reminders.
 - **Personal mail & customer correspondence** (**Mail**, **Customers → Mail**, **System settings → Mail administration**): contact-matched customer correspondence (requires configuring mailbox providers in `config.yml`).
 
 ## Install and run
 
 Requires Node.js `>=24` and the `pnpm` version declared in `package.json`. From
-the latest `main` checkout:
+the latest `main` checkout, use an account with package registry access to the commercial dependencies, including Approval and Task Center:
 
 ```sh
 pnpm install --frozen-lockfile

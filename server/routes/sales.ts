@@ -1,4 +1,4 @@
-import { authorizeCrm } from '../providers/crm-permissions.js';
+import { authorizeCrm, customerReads } from '../providers/crm-permissions.js';
 import { CrmService } from '../providers/crm.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
@@ -8,6 +8,7 @@ import {
 import {
   authorizationToken,
   type AuthorizationEnv,
+  type AuthorizationContext,
 } from '@nocobase/app-plugin-authorization/server';
 import { databaseManagerToken } from '@nocobase/db';
 import {
@@ -33,6 +34,21 @@ import {
   SalesListInput,
 } from '../providers/sales.js';
 
+const salesOperations = {
+  products: { create: 'createProduct', edit: 'editProduct' },
+  opportunities: { create: 'createOpportunity', edit: 'editOpportunity' },
+  quotes: { create: 'createQuote', edit: 'editQuote' },
+} as const;
+function readSales(
+  context: AuthorizationContext,
+  kind: keyof typeof salesOperations,
+) {
+  if (kind === 'products') return authorizeCrm(context, 'viewProducts');
+  return customerReads(
+    context,
+    kind === 'quotes' ? 'viewQuotes' : 'viewOpportunities',
+  );
+}
 const Params = z.object({
   customerId: z.uuid().optional(),
   opportunityId: z.uuid().optional(),
@@ -70,11 +86,7 @@ export default defineApiRoutes(async (app: Application) => {
     router.get(
       base,
       async (c, next) => {
-        await authorizeCrm(
-          c.get('authz'),
-          'view',
-          kind === 'products' ? 'crm.products' : 'crm.records',
-        );
+        await readSales(c.get('authz'), kind);
         await next();
       },
       describeRoute({
@@ -89,11 +101,7 @@ export default defineApiRoutes(async (app: Application) => {
         const input = c.req.valid('query');
         const service = new SalesService(
           connection,
-          await authorizeCrm(
-            c.get('authz'),
-            'view',
-            kind === 'products' ? 'crm.products' : 'crm.records',
-          ),
+          await readSales(c.get('authz'), kind),
         );
         return c.json(
           kind === 'products'
@@ -107,11 +115,7 @@ export default defineApiRoutes(async (app: Application) => {
     router.get(
       `${base}/:id`,
       async (c, next) => {
-        await authorizeCrm(
-          c.get('authz'),
-          'view',
-          kind === 'products' ? 'crm.products' : 'crm.records',
-        );
+        await readSales(c.get('authz'), kind);
         await next();
       },
       describeRoute({
@@ -124,11 +128,7 @@ export default defineApiRoutes(async (app: Application) => {
         const { customerId, opportunityId, id } = c.req.valid('param');
         const service = new SalesService(
           connection,
-          await authorizeCrm(
-            c.get('authz'),
-            'view',
-            kind === 'products' ? 'crm.products' : 'crm.records',
-          ),
+          await readSales(c.get('authz'), kind),
         );
         return c.json({
           data:
@@ -153,23 +153,8 @@ export default defineApiRoutes(async (app: Application) => {
         update ? 'PATCH' : 'POST',
         update ? `${base}/:id` : base,
         async (c, next) => {
-          const action =
-            kind === 'products'
-              ? update
-                ? 'edit'
-                : 'create'
-              : kind === 'opportunities'
-                ? update
-                  ? 'editOpportunity'
-                  : 'createOpportunity'
-                : update
-                  ? 'editQuote'
-                  : 'createQuote';
-          await authorizeCrm(
-            c.get('authz'),
-            action,
-            kind === 'products' ? 'crm.products' : 'crm.records',
-          );
+          const action = salesOperations[kind][update ? 'edit' : 'create'];
+          await authorizeCrm(c.get('authz'), action);
           await next();
         },
         describeRoute({
@@ -199,23 +184,8 @@ export default defineApiRoutes(async (app: Application) => {
         async (c) => {
           const { customerId, opportunityId, id } = c.req.valid('param');
           const input = c.req.valid('json');
-          const action =
-            kind === 'products'
-              ? update
-                ? 'edit'
-                : 'create'
-              : kind === 'opportunities'
-                ? update
-                  ? 'editOpportunity'
-                  : 'createOpportunity'
-                : update
-                  ? 'editQuote'
-                  : 'createQuote';
-          const policies = await authorizeCrm(
-            c.get('authz'),
-            action,
-            kind === 'products' ? 'crm.products' : 'crm.records',
-          );
+          const action = salesOperations[kind][update ? 'edit' : 'create'];
+          const policies = await authorizeCrm(c.get('authz'), action);
           const assertAccess = async () => {
             if (customerId)
               await new CrmService(connection, policies).get(customerId);

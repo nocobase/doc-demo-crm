@@ -40,10 +40,13 @@ export default function CustomerReminders({
   const { t, i18n } = useTranslation();
   const api = useApiClient();
   const { session } = useAuthentication();
-  const access = useCustomerOperation(customerId, 'editCustomer');
+  const access = useCustomerOperation(customerId, 'scheduleReminder');
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
   const path = `crmReminders/customers/${customerId}?page=${pagination.pageIndex + 1}&revision=${revision}`;
   const request = useListData<{ data: Plan[]; meta: { total: number } }>(path);
+  const planActions = ['complete', 'cancel'].filter(
+    (action) => access.access?.actions?.[action + 'Reminder'],
+  );
   const quotes = useListData<{ data: { id: string; name: string }[] }>(
     `crmReminders/customers/${customerId}/quotes`,
   );
@@ -77,10 +80,11 @@ export default function CustomerReminders({
       id: 'actions',
       header: t('reminders.actions'),
       cell: ({ row }) =>
-        access.allowed &&
+        planActions.length > 0 &&
         ['pending', 'notified'].includes(row.original.status) ? (
           <PlanActions
             customerId={customerId}
+            actions={planActions}
             plan={row.original}
             reload={request.reload}
           />
@@ -234,11 +238,13 @@ export default function CustomerReminders({
   );
 }
 function PlanActions({
+  actions,
   customerId,
   plan,
   reload,
 }: {
   customerId: string;
+  actions: string[];
   plan: Plan;
   reload: () => void;
 }) {
@@ -267,7 +273,7 @@ function PlanActions({
   }
   return (
     <div className='flex flex-wrap gap-2'>
-      {['complete', 'cancel'].map((action) => (
+      {actions.map((action) => (
         <PendingButton
           key={action}
           variant='outline'

@@ -4,7 +4,7 @@ import { queueServiceToken } from '@nocobase/app-server/queue';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import { databaseManagerToken, type DatabaseConnection } from '@nocobase/db';
 import { authorizationToken } from '@nocobase/app-plugin-authorization/server';
-import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
+import { crmRoleMembers } from './crm-permissions.js';
 import {
   ApprovalService,
   approvalTaskContributorToken,
@@ -74,9 +74,12 @@ export class QuoteApprovalService {
           managerOf: () => undefined,
           hasRole: async (id, role) =>
             role === 'crm-sales-manager' &&
-            (await this.reviewers(connection)).some(
-              (person) => person.id === id,
-            ),
+            (
+              await app.container
+                .resolve(authorizationToken)
+                .permissionSets.withTransaction(connection)
+                .listAssignments(role)
+            ).some((a) => a.subject.type === 'user' && a.subject.id === id),
         },
       };
     };
@@ -100,33 +103,11 @@ export class QuoteApprovalService {
   async reviewers(
     connection = this.app.container.resolve(databaseManagerToken).connection(),
   ) {
-    const assignments = await this.app.container
-      .resolve(authorizationToken)
-      .permissionSets.withTransaction(connection)
-      .listAssignments('crm-sales-manager');
-    const ids = [
-      ...new Set(
-        assignments
-          .filter((a) => a.subject.type === 'user')
-          .map((a) => a.subject.id),
-      ),
-    ];
-    const users = this.app.container
-      .resolve(userManagementServiceToken)
-      .withConnection(connection);
-    const result = await Promise.all(
-      ids.map(async (id) => {
-        try {
-          const user = await users.get(id);
-          return user.disabledAt ? null : { id: user.id, name: user.name };
-        } catch {
-          return null;
-        }
-      }),
-    );
-    return result.filter(
-      (entry): entry is { id: string; name: string } => entry !== null,
-    );
+    return crmRoleMembers(this.app, connection, [
+      'approveQuote',
+      'rejectQuote',
+      'returnQuote',
+    ]);
   }
 }
 export const quoteApprovalServiceToken =

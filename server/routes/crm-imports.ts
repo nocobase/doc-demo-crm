@@ -5,7 +5,6 @@ import {
 } from '@nocobase/app-plugin-authentication';
 import {
   authorizationToken,
-  type AuthorizationContext,
   type AuthorizationEnv,
 } from '@nocobase/app-plugin-authorization/server';
 import { databaseManagerToken } from '@nocobase/db';
@@ -52,14 +51,6 @@ export default defineApiRoutes(async (app: Application) => {
     );
   }
 
-  const canViewAllBatches = async (authzContext: AuthorizationContext) => {
-    const decision = await authzContext.authorize({
-      resource: { type: 'composite', id: 'crm.records' },
-      action: 'assignOwner',
-    });
-    return decision.effect !== 'deny';
-  };
-
   router.get(
     '/template.csv',
     describeRoute({
@@ -68,7 +59,7 @@ export default defineApiRoutes(async (app: Application) => {
       responses: { ...apiErrorResponses },
     }),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'view');
+      await authorizeCrm(c.get('authz'), 'importCustomers');
       c.header('Content-Type', 'text/csv; charset=utf-8');
       c.header(
         'Content-Disposition',
@@ -90,11 +81,8 @@ export default defineApiRoutes(async (app: Application) => {
       },
     }),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'view');
-      const data = await imports.listBatches(
-        c.get('auth')!.user.id,
-        await canViewAllBatches(c.get('authz')),
-      );
+      const policies = await authorizeCrm(c.get('authz'), 'viewImports');
+      const data = await imports.listBatches(policies);
       return c.json({ data, meta: { total: data.length } });
     },
   );
@@ -113,6 +101,7 @@ export default defineApiRoutes(async (app: Application) => {
     apiValidator('json', CreateImportBatchInput),
     async (c) => {
       const input = c.req.valid('json');
+      const policies = await authorizeCrm(c.get('authz'), 'importCustomers');
       await authorizeCrm(c.get('authz'), 'createCustomer');
       if (input.conflictMode === 'update') {
         await authorizeCrm(c.get('authz'), 'editCustomer');
@@ -128,10 +117,11 @@ export default defineApiRoutes(async (app: Application) => {
           await authorizeCrm(c.get('authz'), 'createCustomer');
         },
         authorizeReplay: async () => {
-          await authorizeCrm(c.get('authz'), 'view');
+          await authorizeCrm(c.get('authz'), 'importCustomers');
         },
         execute: (tx) =>
           imports.createBatchRecord(
+            policies,
             tx,
             { id: user.id, name: user.name },
             input,
@@ -154,12 +144,8 @@ export default defineApiRoutes(async (app: Application) => {
     }),
     apiValidator('param', BatchParams),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'view');
-      const data = await imports.getBatch(
-        c.get('auth')!.user.id,
-        await canViewAllBatches(c.get('authz')),
-        c.req.valid('param').id,
-      );
+      const policies = await authorizeCrm(c.get('authz'), 'viewImports');
+      const data = await imports.getBatch(policies, c.req.valid('param').id);
       return c.json({ data });
     },
   );
@@ -173,12 +159,8 @@ export default defineApiRoutes(async (app: Application) => {
     }),
     apiValidator('param', BatchParams),
     async (c) => {
-      await authorizeCrm(c.get('authz'), 'view');
-      const report = await imports.errorsCsv(
-        c.get('auth')!.user.id,
-        await canViewAllBatches(c.get('authz')),
-        c.req.valid('param').id,
-      );
+      const policies = await authorizeCrm(c.get('authz'), 'viewImports');
+      const report = await imports.errorsCsv(policies, c.req.valid('param').id);
       c.header('Content-Type', 'text/csv; charset=utf-8');
       c.header(
         'Content-Disposition',

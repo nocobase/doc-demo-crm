@@ -1,3 +1,5 @@
+import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { crmOperations } from '../../../server/crm-operations.js';
 import {
   useApiClient,
   usePageBreadcrumb,
@@ -102,6 +104,10 @@ function statusTone(status: ImportBatch['status']) {
 }
 
 export default function CustomerImportsPage() {
+  const batchCreate = useCan(crmOperations.importCustomers);
+  const customerCreate = useCan(crmOperations.createCustomer);
+  const customerEdit = useCan(crmOperations.editCustomer);
+  const canImport = batchCreate.can && customerCreate.can;
   const { t } = useTranslation();
   const api = useApiClient();
   const { session } = useAuthentication();
@@ -212,156 +218,165 @@ export default function CustomerImportsPage() {
           title={t('crmImports.title')}
           description={t('crmImports.description')}
           actions={
-            <Button
-              variant='outline'
-              onClick={() =>
-                void downloadCsv(
-                  'crmImports/template.csv',
-                  'crm-customers-template.csv',
-                )
-              }
-            >
-              <Download className='mr-2 size-4' />
-              {t('crmImports.downloadTemplate')}
-            </Button>
+            canImport && (
+              <Button
+                variant='outline'
+                onClick={() =>
+                  void downloadCsv(
+                    'crmImports/template.csv',
+                    'crm-customers-template.csv',
+                  )
+                }
+              >
+                <Download className='mr-2 size-4' />
+                {t('crmImports.downloadTemplate')}
+              </Button>
+            )
           }
         />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('crmImports.newImport')}</CardTitle>
-            <CardDescription>{t('crmImports.newImportHint')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className='space-y-4' onSubmit={(e) => void handleSubmit(e)}>
-              <div className='grid gap-4 md:grid-cols-3'>
-                <div className='space-y-2'>
-                  <Label htmlFor='import-file'>{t('crmImports.csvFile')}</Label>
-                  <Input
-                    id='import-file'
-                    type='file'
-                    accept='.csv,text/csv'
-                    onChange={(e) => void handleFileChange(e)}
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label>{t('crmImports.conflictMode')}</Label>
-                  <Select
-                    value={conflictMode}
-                    onValueChange={(value) => {
-                      if (
-                        value === 'skip' ||
-                        value === 'update' ||
-                        value === 'reject'
-                      ) {
-                        setConflictMode(value);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className='w-full'>
-                      <SelectValue>
-                        {conflictMode === 'skip'
-                          ? t('crmImports.conflictSkip')
-                          : conflictMode === 'update'
-                            ? t('crmImports.conflictUpdate')
-                            : t('crmImports.conflictReject')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='skip'>
-                        {t('crmImports.conflictSkip')}
-                      </SelectItem>
-                      <SelectItem value='update'>
-                        {t('crmImports.conflictUpdate')}
-                      </SelectItem>
-                      <SelectItem value='reject'>
-                        {t('crmImports.conflictReject')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='space-y-2'>
-                  <Label>{t('crmImports.transactionMode')}</Label>
-                  <Select
-                    value={transactionMode}
-                    onValueChange={(value) => {
-                      if (value === 'allOrNothing' || value === 'rowByRow') {
-                        setTransactionMode(value);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className='w-full'>
-                      <SelectValue>
-                        {transactionMode === 'allOrNothing'
-                          ? t('crmImports.txAllOrNothing')
-                          : t('crmImports.txRowByRow')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='allOrNothing'>
-                        {t('crmImports.txAllOrNothing')}
-                      </SelectItem>
-                      <SelectItem value='rowByRow'>
-                        {t('crmImports.txRowByRow')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className='space-y-2'>
-                <div className='flex flex-wrap items-center justify-between gap-2'>
-                  <Label htmlFor='import-csv-content'>
-                    {t('crmImports.csvPreview')} ({fileName})
-                  </Label>
-                  <div className='flex gap-2'>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='outline'
-                      onClick={() => {
-                        setFileName('customers-valid-sample.csv');
-                        setCsvContent(SAMPLE_VALID_CSV);
+        {canImport && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('crmImports.newImport')}</CardTitle>
+              <CardDescription>{t('crmImports.newImportHint')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                className='space-y-4'
+                onSubmit={(e) => void handleSubmit(e)}
+              >
+                <div className='grid gap-4 md:grid-cols-3'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='import-file'>
+                      {t('crmImports.csvFile')}
+                    </Label>
+                    <Input
+                      id='import-file'
+                      type='file'
+                      accept='.csv,text/csv'
+                      onChange={(e) => void handleFileChange(e)}
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>{t('crmImports.conflictMode')}</Label>
+                    <Select
+                      value={conflictMode}
+                      onValueChange={(value) => {
+                        if (
+                          value === 'skip' ||
+                          value === 'update' ||
+                          value === 'reject'
+                        ) {
+                          setConflictMode(value);
+                        }
                       }}
                     >
-                      {t('crmImports.loadValidSample')}
-                    </Button>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='outline'
-                      onClick={() => {
-                        setFileName('customers-with-errors.csv');
-                        setCsvContent(SAMPLE_ERROR_CSV);
+                      <SelectTrigger className='w-full'>
+                        <SelectValue>
+                          {conflictMode === 'skip'
+                            ? t('crmImports.conflictSkip')
+                            : conflictMode === 'update'
+                              ? t('crmImports.conflictUpdate')
+                              : t('crmImports.conflictReject')}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='skip'>
+                          {t('crmImports.conflictSkip')}
+                        </SelectItem>
+                        <SelectItem disabled={!customerEdit.can} value='update'>
+                          {t('crmImports.conflictUpdate')}
+                        </SelectItem>
+                        <SelectItem value='reject'>
+                          {t('crmImports.conflictReject')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>{t('crmImports.transactionMode')}</Label>
+                    <Select
+                      value={transactionMode}
+                      onValueChange={(value) => {
+                        if (value === 'allOrNothing' || value === 'rowByRow') {
+                          setTransactionMode(value);
+                        }
                       }}
                     >
-                      {t('crmImports.loadErrorSample')}
-                    </Button>
+                      <SelectTrigger className='w-full'>
+                        <SelectValue>
+                          {transactionMode === 'allOrNothing'
+                            ? t('crmImports.txAllOrNothing')
+                            : t('crmImports.txRowByRow')}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='allOrNothing'>
+                          {t('crmImports.txAllOrNothing')}
+                        </SelectItem>
+                        <SelectItem value='rowByRow'>
+                          {t('crmImports.txRowByRow')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <Textarea
-                  id='import-csv-content'
-                  rows={5}
-                  className='font-mono text-xs'
-                  value={csvContent}
-                  onChange={(e) => setCsvContent(e.target.value)}
-                />
-              </div>
 
-              {submitError ? (
-                <Alert variant='destructive'>
-                  <AlertTitle>{t('crmImports.submitFailed')}</AlertTitle>
-                  <AlertDescription>{submitError}</AlertDescription>
-                </Alert>
-              ) : null}
+                <div className='space-y-2'>
+                  <div className='flex flex-wrap items-center justify-between gap-2'>
+                    <Label htmlFor='import-csv-content'>
+                      {t('crmImports.csvPreview')} ({fileName})
+                    </Label>
+                    <div className='flex gap-2'>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        onClick={() => {
+                          setFileName('customers-valid-sample.csv');
+                          setCsvContent(SAMPLE_VALID_CSV);
+                        }}
+                      >
+                        {t('crmImports.loadValidSample')}
+                      </Button>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        onClick={() => {
+                          setFileName('customers-with-errors.csv');
+                          setCsvContent(SAMPLE_ERROR_CSV);
+                        }}
+                      >
+                        {t('crmImports.loadErrorSample')}
+                      </Button>
+                    </div>
+                  </div>
+                  <Textarea
+                    id='import-csv-content'
+                    rows={5}
+                    className='font-mono text-xs'
+                    value={csvContent}
+                    onChange={(e) => setCsvContent(e.target.value)}
+                  />
+                </div>
 
-              <PendingButton type='submit' busy={submission.submitting}>
-                <Upload className='mr-2 size-4' />
-                {t('crmImports.startImport')}
-              </PendingButton>
-            </form>
-          </CardContent>
-        </Card>
+                {submitError ? (
+                  <Alert variant='destructive'>
+                    <AlertTitle>{t('crmImports.submitFailed')}</AlertTitle>
+                    <AlertDescription>{submitError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <PendingButton type='submit' busy={submission.submitting}>
+                  <Upload className='mr-2 size-4' />
+                  {t('crmImports.startImport')}
+                </PendingButton>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0'>

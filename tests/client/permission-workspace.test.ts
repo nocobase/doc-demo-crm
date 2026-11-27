@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AppClientRegisteredRoute } from '@nocobase/app-client/plugins';
 import { resolveAppRuntime } from '@nocobase/app-client/runtime';
+import { crmOperations } from '../../server/crm-operations.js';
 import appRuntime from '../../client/runtime.js';
 import { permissionWorkspaceSelection } from '../../client/pages/settings/permission-workspace.js';
 
@@ -20,6 +21,19 @@ describe('the application’s permission selection', () => {
     );
     const mapped = Object.keys(permissionWorkspaceSelection.pages ?? {});
     expect(mapped.filter((page) => !pages.has(page))).toEqual([]);
+  });
+
+  it('exposes every CRM business operation in the native role editor', () => {
+    const entries = permissionWorkspaceSelection.business.flatMap((object) =>
+      (object.actions ?? []).map((action) => [object.id, action]),
+    );
+    const operations = Object.values(crmOperations)
+      .filter((operation) => operation.resource.id !== 'crm.integrations')
+      .map((operation) => [operation.resource.id, operation.action]);
+    expect(entries.sort()).toEqual(operations.sort());
+    expect(
+      permissionWorkspaceSelection.settingsComposites?.crmIntegrationsSettings,
+    ).toEqual([{ id: 'crm.integrations' }]);
   });
 
   it('lists each object once and maps pages only to objects it lists', () => {

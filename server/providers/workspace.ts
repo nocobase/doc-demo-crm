@@ -1,5 +1,6 @@
-import { scopedRepository, type CrmPolicies } from './crm-permissions.js';
-import type { DatabaseConnection } from '@nocobase/db';
+import type { CrmPolicies } from './crm-permissions.js';
+import { buildFilter } from '@nocobase/repository-input';
+import type { DatabaseConnection, ReadNode } from '@nocobase/db';
 import { z } from 'zod';
 
 const CustomerReference = z.object({ id: z.string(), name: z.string() });
@@ -47,88 +48,129 @@ export class WorkspaceService {
     private readonly connection: DatabaseConnection,
     private readonly policies: CrmPolicies,
   ) {}
-  private repository(name: string) {
-    return scopedRepository(this.connection, this.policies, name);
+  // Combine the separately granted reads into this query's authorized parent relations.
+  private readNode(
+    name: string,
+    fields: string[],
+    relations?: Record<string, ReadNode>,
+  ): ReadNode | undefined {
+    const policy = this.policies[name];
+    if (!policy || !policy.read) return undefined;
+    return {
+      ...(policy.read === true
+        ? { scope: true as const, fields }
+        : policy.read),
+      relations,
+    };
+  }
+  private repository(name: string, read?: ReadNode) {
+    if (!read) return undefined;
+    return this.connection
+      .repository(name)
+      .withPolicy({ read, create: false, update: false, delete: false });
   }
   async read() {
-    const customers = this.repository('crmCustomers');
-    const opportunities = this.repository('crmOpportunities');
-    const quotes = this.repository('crmQuotes');
+    const customer = this.readNode('crmCustomers', ['id', 'name']);
+    const opportunity =
+      customer &&
+      this.readNode(
+        'crmOpportunities',
+        ['id', 'name', 'customerId', 'stage', 'updatedAt'],
+        { customer },
+      );
+    const followUp =
+      customer &&
+      this.readNode(
+        'crmFollowUps',
+        [
+          'id',
+          'customerId',
+          'channel',
+          'content',
+          'nextStep',
+          'authorName',
+          'createdAt',
+        ],
+        { customer },
+      );
+    const quote =
+      opportunity &&
+      this.readNode(
+        'crmQuotes',
+        ['id', 'name', 'opportunityId', 'totalCents', 'updatedAt'],
+        { opportunity },
+      );
+    const customers = this.repository('crmCustomers', customer);
+    const opportunities = this.repository('crmOpportunities', opportunity);
+    const quotes = this.repository('crmQuotes', quote);
+    const followUps = this.repository('crmFollowUps', followUp);
+    const visibleCustomer = buildFilter((f) => f.relation('customer').exists());
+    const visibleOpportunity = buildFilter((f) =>
+      f.relation('opportunity').some((p) => p.relation('customer').exists()),
+    );
     const [
       customerCount,
       opportunityCount,
       quoteCount,
-      followUps,
+      recentFollowUps,
       recentOpportunities,
       recentQuotes,
     ] = await Promise.all([
-      customers.count(),
-      opportunities.count(),
-      quotes.count(),
-      this.repository('crmFollowUps').findMany({
+      customers?.count() ?? 0,
+      opportunities?.count({ filter: visibleCustomer }) ?? 0,
+      quotes?.count({ filter: visibleOpportunity }) ?? 0,
+      followUps?.findMany({
+        filter: visibleCustomer,
         limit: 5,
         sort: (s) => [s.field('createdAt').desc(), s.field('id').asc()],
-      }),
-      opportunities.findMany({
+        select: (s) =>
+          s
+            .fields(
+              'id',
+              'customerId',
+              'channel',
+              'content',
+              'nextStep',
+              'authorName',
+              'createdAt',
+            )
+            .include('customer', (c) => c.fields('id', 'name')),
+      }) ?? [],
+      opportunities?.findMany({
+        filter: visibleCustomer,
         limit: 5,
         sort: (s) => [s.field('updatedAt').desc(), s.field('id').asc()],
         select: (s) =>
-          s.fields('id', 'name', 'customerId', 'stage', 'updatedAt'),
-      }),
-      quotes.findMany({
+          s
+            .fields('id', 'name', 'customerId', 'stage', 'updatedAt')
+            .include('customer', (c) => c.fields('id', 'name')),
+      }) ?? [],
+      quotes?.findMany({
+        filter: visibleOpportunity,
         limit: 5,
         sort: (s) => [s.field('updatedAt').desc(), s.field('id').asc()],
         select: (s) =>
-          s.fields('id', 'name', 'opportunityId', 'totalCents', 'updatedAt'),
-      }),
+          s
+            .fields('id', 'name', 'totalCents', 'updatedAt')
+            .include('opportunity', (p) =>
+              p
+                .fields('id', 'name', 'customerId')
+                .include('customer', (c) => c.fields('id', 'name')),
+            ),
+      }) ?? [],
     ]);
-    // Follow-ups predate Collection relation metadata. Resolve only the five
-    // preview owners; no schema change is needed for this UI lesson.
-    const recentFollowUps = await Promise.all(
-      followUps.map(async (record) => ({
-        ...record,
-        customer: await customers.findOne({
-          filter: { id: z.string().parse(record.customerId) },
-          select: (s) => s.fields('id', 'name'),
-        }),
-      })),
-    );
     return Workspace.parse({
       counts: {
         customers: customerCount,
         opportunities: opportunityCount,
         quotes: quoteCount,
       },
-      followUps: recentFollowUps.filter((record) => record.customer),
-      opportunities: (
-        await Promise.all(
-          recentOpportunities.map(async (record) => ({
-            ...record,
-            customer: await customers.findOne({
-              filter: { id: z.string().parse(record.customerId) },
-            }),
-          })),
-        )
-      ).filter((record) => record.customer),
-      quotes: (
-        await Promise.all(
-          recentQuotes.map(async (record) => {
-            const opportunity = await opportunities.findOne({
-              filter: { id: z.string().parse(record.opportunityId) },
-            });
-            const customer = opportunity
-              ? await customers.findOne({
-                  filter: { id: z.string().parse(opportunity.customerId) },
-                })
-              : null;
-            return {
-              ...record,
-              total: Number(record.totalCents) / 100,
-              opportunity: { ...opportunity, customer },
-            };
-          }),
-        )
-      ).filter((record) => record.opportunity.customer),
+      followUps: recentFollowUps,
+      opportunities: recentOpportunities,
+      quotes: recentQuotes.map((record) => ({
+        ...record,
+        total: Number(record.totalCents) / 100,
+      })),
     });
   }
 }

@@ -10,8 +10,8 @@ export default defineSystemSettingsRoutes([
     path: '/notifications/events',
     auth: 'required',
     authz: {
-      resource: { type: 'page', id: 'notification.logs' },
-      action: 'access',
+      resource: { type: 'settings', id: 'crm.notificationEvents' },
+      action: 'read',
     },
     navigation: { title: 'crmNotifications.title', icon: List },
     breadcrumb: { title: 'crmNotifications.events' },

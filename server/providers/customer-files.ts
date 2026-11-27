@@ -10,6 +10,10 @@ import type {
   RepositoryFilter,
   RepositoryRecord,
 } from '@nocobase/repository-input';
+import { CrmService } from './crm.js';
+import { scopedRepository, type CrmPolicies } from './crm-permissions.js';
+import { SalesService } from './sales.js';
+import { quotationTemplateRevision } from '../templates/quotation-v2.js';
 import { lockQuote } from './quote-lock.js';
 import { DOCX_MIME, renderQuotation } from './quotation-renderer.js';
 export const FileRow = z.object({
@@ -27,7 +31,7 @@ export const FileRow = z.object({
   status: z.string(),
 });
 export type CustomerFile = z.infer<typeof FileRow>;
-const FrozenQuote = z.object({
+const PrintableQuote = z.object({
   id: z.string(),
   name: z.string(),
   currency: z.literal('USD'),
@@ -59,8 +63,48 @@ export const fileConflict = () =>
     domain: 'crm',
     message: 'The file is no longer available for this operation.',
   });
+async function renderQuoteDocument(
+  quote: z.infer<typeof PrintableQuote>,
+  customer: string,
+  opportunity: string,
+  kind: 'draft' | 'confirmed',
+) {
+  const data = {
+    name: quote.name,
+    customer,
+    opportunity,
+    currency: quote.currency,
+    reference: quote.id,
+    total: quote.total.toFixed(2),
+    lines: quote.lines.map((line) => ({
+      ...line,
+      unitPrice: line.unitPrice.toFixed(2),
+      discount: `${line.discount}%`,
+      amount: line.amount.toFixed(2),
+    })),
+  };
+  let bytes: Buffer;
+  try {
+    bytes = await renderQuotation(data, kind);
+  } catch {
+    throw new ApiError({
+      status: 'INTERNAL',
+      reason: 'DOCUMENT_RENDER_FAILED',
+      domain: 'crm',
+      message: 'Unable to generate the quotation document. Try again.',
+    });
+  }
+  if (bytes.length > 10 * 1024 * 1024) throw fileConflict();
+  return bytes;
+}
+export function customerFileDisk(app: Application): string {
+  return z.string().min(1).parse(app.config.get('drive.default'));
+}
 export class CustomerFilesService {
-  constructor(private readonly app: Application) {}
+  readonly disk: string;
+  constructor(private readonly app: Application) {
+    this.disk = customerFileDisk(app);
+  }
   get connection() {
     return this.app.container.resolve(databaseManagerToken).connection();
   }
@@ -70,7 +114,7 @@ export class CustomerFilesService {
       .repository('crmFiles', {
         connection: 'main',
         transaction: tx,
-        disk: 'local',
+        disk: this.disk,
         accessPath: '/uploads/crmFiles',
         policy: {
           read: true,
@@ -157,6 +201,58 @@ export class CustomerFilesService {
       snapshotHash: doc.snapshotHash,
     };
   }
+  async draftPreview(
+    policies: CrmPolicies,
+    {
+      customerId,
+      opportunityId,
+      quoteId,
+    }: { customerId: string; opportunityId: string; quoteId: string },
+  ) {
+    const source = await this.connection.transaction(async (tx) => {
+      const sales = new SalesService(tx, policies);
+      const customer = await new CrmService(tx, policies).get(customerId);
+      const opportunity = await sales.opportunity(customerId, opportunityId);
+      const headers = scopedRepository(tx, policies, 'crmQuotes');
+      const readHeader = () =>
+        headers.findOne({
+          filter: { customerId, opportunityId, id: quoteId },
+          select: (s) => s.fields('revision'),
+        });
+      const before = await readHeader();
+      const quote = await sales.quote(customerId, opportunityId, quoteId);
+      const approval = await tx
+        .repository('crmQuoteApprovals')
+        .findOne({ filter: { quoteId } });
+      if (approval && approval.status !== 'draft')
+        throw new ApiError({
+          status: 'FAILED_PRECONDITION',
+          reason: 'QUOTE_NOT_DRAFT',
+          domain: 'crm',
+          message: 'Draft previews are available only for draft quotations.',
+        });
+      // On read-committed databases an edit can commit between the header and line reads.
+      const after = await readHeader();
+      if (!before || !after || before.revision !== after.revision)
+        throw new ApiError({
+          status: 'ABORTED',
+          reason: 'QUOTE_CHANGED',
+          domain: 'crm',
+          message: 'The quotation changed. Download the draft again.',
+        });
+      return {
+        quote: PrintableQuote.parse(quote),
+        customer: z.string().parse(customer.name),
+        opportunity: z.string().parse(opportunity.name),
+      };
+    });
+    return renderQuoteDocument(
+      source.quote,
+      source.customer,
+      source.opportunity,
+      'draft',
+    );
+  }
   async generate(
     tx: DatabaseConnection,
     quoteId: string,
@@ -178,42 +274,22 @@ export class CustomerFilesService {
         domain: 'crm',
         message: 'Confirm the quotation before generating a document.',
       });
-    const quote = FrozenQuote.parse(approval.snapshot);
+    const quote = PrintableQuote.parse(approval.snapshot);
     const sourceSnapshot = {
       ...quote,
       customer,
       opportunity,
-      templateRevision: 1,
+      templateRevision: quotationTemplateRevision,
     };
     const snapshotHash = createHash('sha256')
       .update(JSON.stringify(sourceSnapshot))
       .digest('hex');
-    const data = {
-      name: quote.name,
+    const bytes = await renderQuoteDocument(
+      quote,
       customer,
       opportunity,
-      currency: quote.currency,
-      reference: quote.id,
-      total: quote.total.toFixed(2),
-      lines: quote.lines.map((line) => ({
-        ...line,
-        unitPrice: line.unitPrice.toFixed(2),
-        discount: `${line.discount}%`,
-        amount: line.amount.toFixed(2),
-      })),
-    };
-    let bytes: Buffer;
-    try {
-      bytes = await renderQuotation(data);
-    } catch {
-      throw new ApiError({
-        status: 'INTERNAL',
-        reason: 'DOCUMENT_RENDER_FAILED',
-        domain: 'crm',
-        message: 'Unable to generate the quotation document. Try again.',
-      });
-    }
-    if (bytes.length > 10 * 1024 * 1024) throw fileConflict();
+      'confirmed',
+    );
     const { record } = await this.repository(tx, {
       ownerId: actorId,
       customerId,
@@ -229,7 +305,7 @@ export class CustomerFilesService {
         quoteId,
         customerId,
         fileId: record.id,
-        templateRevision: 1,
+        templateRevision: quotationTemplateRevision,
         snapshotHash,
         sourceSnapshot,
         createdAt: new Date().toISOString(),
@@ -237,7 +313,7 @@ export class CustomerFilesService {
     });
     return {
       file: await this.safe(await this.get(record.id, tx), tx),
-      templateRevision: 1,
+      templateRevision: quotationTemplateRevision,
       snapshotHash,
     };
   }

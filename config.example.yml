@@ -185,6 +185,20 @@ database:
     # An existing database another system owns sets schemaManagement: external and runs no tasks. Its titles,
     # descriptions and relations are read from database/<connection>/metadata/<name>.json unless metadataStore says otherwise.
 
+# Customer attachments and issued quotations use the default disk for new files.
+# Keep earlier disks configured while any file records still reference them.
+# For a private S3 bucket, supply an AWS role or AWS SDK environment credentials.
+# drive:
+#   default: s3
+#   disks:
+#     s3:
+#       driver: s3
+#       bucket: your-bucket
+#       region: us-east-1
+#       credentials: {}
+#       visibility: private
+#       supportsACL: false
+
 # Optional backup settings. Disk exclusions are relative to a named filesystem Drive disk.
 # backup:
 #   disks:

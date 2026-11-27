@@ -1,0 +1,46 @@
+// Pure permission references shared by the browser and server.
+function permission<const T extends string, const A extends string>(
+  id: T,
+  action: A,
+) {
+  return { resource: { type: 'composite' as const, id }, action };
+}
+export const crmOperations = {
+  viewCustomer: permission('crm.customers', 'view'),
+  createCustomer: permission('crm.customers', 'create'),
+  editCustomer: permission('crm.customers', 'edit'),
+  assignOwner: permission('crm.customers', 'assignOwner'),
+  shareCustomer: permission('crm.customers', 'share'),
+  attachFile: permission('crm.customers', 'attachFile'),
+  removeFile: permission('crm.customers', 'removeFile'),
+  scheduleReminder: permission('crm.customers', 'schedule'),
+  completeReminder: permission('crm.customers', 'completeReminder'),
+  cancelReminder: permission('crm.customers', 'cancelReminder'),
+  importCustomers: permission('crm.imports', 'create'),
+  viewImports: permission('crm.imports', 'view'),
+  useAssistant: permission('crm.customers', 'useAssistant'),
+  viewContacts: permission('crm.contacts', 'view'),
+  addContact: permission('crm.contacts', 'create'),
+  editContact: permission('crm.contacts', 'edit'),
+  viewFollowUps: permission('crm.followUps', 'view'),
+  recordFollowUp: permission('crm.followUps', 'create'),
+  viewOpportunities: permission('crm.opportunities', 'view'),
+  createOpportunity: permission('crm.opportunities', 'create'),
+  editOpportunity: permission('crm.opportunities', 'edit'),
+  viewQuotes: permission('crm.quotes', 'view'),
+  createQuote: permission('crm.quotes', 'create'),
+  editQuote: permission('crm.quotes', 'edit'),
+  submitQuote: permission('crm.quotes', 'submit'),
+  withdrawQuote: permission('crm.quotes', 'withdraw'),
+  approveQuote: permission('crm.quotes', 'approve'),
+  rejectQuote: permission('crm.quotes', 'reject'),
+  returnQuote: permission('crm.quotes', 'return'),
+  issueQuote: permission('crm.quotes', 'issue'),
+  viewProducts: permission('crm.products', 'view'),
+  createProduct: permission('crm.products', 'create'),
+  editProduct: permission('crm.products', 'edit'),
+  readIntegrations: permission('crm.integrations', 'read'),
+  syncIntegrations: permission('crm.integrations', 'sync'),
+  configureIntegrations: permission('crm.integrations', 'configure'),
+} as const;
+export type CrmOperation = keyof typeof crmOperations;

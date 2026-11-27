@@ -1,3 +1,7 @@
+import {
+  crmOperations,
+  type CrmOperation,
+} from '../../server/crm-operations.js';
 import type { ReactElement } from 'react';
 import { apiClientToken } from '@nocobase/app-client';
 import {
@@ -11,22 +15,11 @@ import type {
 } from '../../client/hooks/use-crm-access.js';
 import { renderSettingsClient } from './settings-client.js';
 
-const recordOperations = [
-  'view',
-  'createCustomer',
-  'editCustomer',
-  'addContact',
-  'editContact',
-  'recordFollowUp',
-  'createOpportunity',
-  'editOpportunity',
-  'createQuote',
-  'editQuote',
-  'assignOwner',
-  'shareCustomer',
-];
+const recordOperations = (Object.keys(crmOperations) as CrmOperation[]).filter(
+  (key) => crmOperations[key].resource.id !== 'crm.products',
+);
 export interface CrmClientFixture {
-  recordActions?: string[];
+  recordActions?: CrmOperation[];
   productActions?: string[];
   globalAccess?: Partial<CrmAccess>;
   customerAccess?: Partial<CustomerAccess>;
@@ -42,11 +35,16 @@ export function renderCrmClient(
   const permissions: AuthorizationSnapshot = {
     unrestricted: false,
     permissions: [
-      { resource: { type: 'page', id: 'customers' }, actions: ['access'] },
-      {
-        resource: { type: 'composite', id: 'crm.records' },
-        actions: recordActions,
-      },
+      { resource: { type: 'page', id: 'crm.customers' }, actions: ['access'] },
+      ...Array.from(
+        new Set(recordActions.map((key) => crmOperations[key].resource.id)),
+        (id) => ({
+          resource: { type: 'composite' as const, id },
+          actions: recordActions
+            .filter((key) => crmOperations[key].resource.id === id)
+            .map((key) => crmOperations[key].action),
+        }),
+      ),
       {
         resource: { type: 'composite', id: 'crm.products' },
         actions: productActions,
@@ -55,13 +53,6 @@ export function renderCrmClient(
   };
   const globalAccess: CrmAccess = {
     createCustomer: recordActions.includes('createCustomer'),
-    manageProducts:
-      productActions.includes('create') && productActions.includes('edit'),
-    productActions: {
-      view: productActions.includes('view'),
-      create: productActions.includes('create'),
-      edit: productActions.includes('edit'),
-    },
     ...fixture.globalAccess,
   };
   const customerAccess: CustomerAccess = {

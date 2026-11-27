@@ -1,3 +1,4 @@
+import { crmOperations, type CrmOperation } from '../crm-operations.js';
 import {
   crmNotificationsToken,
   enqueueCrmNotification,
@@ -17,10 +18,7 @@ import { validateDataScopeRule } from '@nocobase/app-plugin-authorization/server
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import { databaseManagerToken, type DatabaseConnection } from '@nocobase/db';
 import { selection } from '@nocobase/authorization/core';
-import {
-  defineSharingRule,
-  type SharingRulesAuthorizationApi,
-} from '@nocobase/authorization/sharing-rules';
+import { type SharingRulesAuthorizationApi } from '@nocobase/authorization/sharing-rules';
 import {
   ApiError,
   apiErrorHandler,
@@ -35,12 +33,23 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import {
   authorizeCrm,
-  crmRecords,
-  scopeKeys,
+  crmRoleMembers,
+  crmCustomers,
+  crmContacts,
+  crmFollowUps,
+  crmOpportunities,
+  crmQuotes,
   scopedRepository,
 } from '../providers/crm-permissions.js';
 import { CrmService } from '../providers/crm.js';
 
+const sharedResources = [
+  [crmCustomers, ['customers']],
+  [crmContacts, ['contacts']],
+  [crmFollowUps, ['followUps']],
+  [crmOpportunities, ['opportunities']],
+  [crmQuotes, ['quotes', 'lines']],
+] as const;
 const User = z.object({ id: z.string(), name: z.string() });
 const Access = z.object({
   shared: z.boolean(),
@@ -56,7 +65,6 @@ const Access = z.object({
 });
 const Global = z.object({
   createCustomer: z.boolean(),
-  manageProducts: z.boolean(),
 });
 const Params = z.object({ id: z.uuid() });
 const Header = z.object({ 'idempotency-key': z.string() });
@@ -99,47 +107,14 @@ export default defineApiRoutes(async (app: Application) => {
         .required({ scopedKeys: false }),
       authz.middleware(),
     );
-  const eligible = async (tx: DatabaseConnection = connection) => {
-    const sets = authz.permissionSets.withTransaction(tx);
-    const directory = users.withConnection(tx);
-    const assignments = (
-      await Promise.all(
-        ['crm-sales', 'crm-sales-manager'].map((key) =>
-          sets.listAssignments(key),
-        ),
-      )
-    ).flat();
-    const ids = [
-      ...new Set(
-        assignments
-          .filter((a) => a.subject.type === 'user')
-          .map((a) => a.subject.id),
-      ),
-    ];
-    const entries = await Promise.all(
-      ids.map(async (id) => {
-        try {
-          const user = await directory.get(id);
-          return user.disabledAt ? null : { id: user.id, name: user.name };
-        } catch {
-          return null;
-        }
-      }),
-    );
-    return entries
-      .filter((entry): entry is { id: string; name: string } => entry !== null)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  };
+  const eligible = (tx = connection) =>
+    crmRoleMembers(app, tx, ['viewCustomer']);
   const may = async (
     context: AuthorizationContext,
-    action: string,
+    operation: CrmOperation,
     id?: string,
-    resource = 'crm.records',
   ) => {
-    const decision = await context.authorize({
-      resource: { type: 'composite', id: resource },
-      action,
-    });
+    const decision = await context.authorize(crmOperations[operation]);
     if (decision.effect === 'deny' || !decision.conditions?.database)
       return false;
     if (!id) return true;
@@ -152,17 +127,52 @@ export default defineApiRoutes(async (app: Application) => {
         .findOne({ filter: { id } }),
     );
   };
-  const key = (id: string) => `crm.customer.${id}.read`;
+  const key = (id: string, resource = 'crm.customers') =>
+    `${resource}.${id}.read`;
   const inspect = async (context: AuthorizationContext, id: string) => {
     const customer = await new CrmService(
       connection,
-      await authorizeCrm(context, 'view'),
+      await authorizeCrm(context, 'viewCustomer'),
     ).get(id);
-    const canAssign = await may(context, 'assignOwner', id);
-    const canShare = await may(context, 'shareCustomer', id);
+    const actions = Object.fromEntries(
+      await Promise.all(
+        (
+          [
+            'attachFile',
+            'removeFile',
+            'scheduleReminder',
+            'completeReminder',
+            'cancelReminder',
+            'useAssistant',
+            'issueQuote',
+            'submitQuote',
+            'withdrawQuote',
+            'approveQuote',
+            'rejectQuote',
+            'returnQuote',
+            'editCustomer',
+            'addContact',
+            'editContact',
+            'recordFollowUp',
+            'createOpportunity',
+            'editOpportunity',
+            'createQuote',
+            'editQuote',
+            'assignOwner',
+            'shareCustomer',
+          ] as const
+        ).map(
+          async (action) => [action, await may(context, action, id)] as const,
+        ),
+      ),
+    );
+    const {
+      assignOwner: canAssign,
+      shareCustomer: canShare,
+      editCustomer: edit,
+    } = actions;
     const manage = canAssign || canShare;
-    const [edit, options, rule] = await Promise.all([
-      may(context, 'editCustomer', id),
+    const [options, rule] = await Promise.all([
       manage ? eligible() : Promise.resolve([]),
       rules.get(key(id)),
     ]);
@@ -188,24 +198,6 @@ export default defineApiRoutes(async (app: Application) => {
           }
           return { userId: subject.id, name };
         }),
-    );
-    const actions = Object.fromEntries(
-      await Promise.all(
-        [
-          'editCustomer',
-          'addContact',
-          'editContact',
-          'recordFollowUp',
-          'createOpportunity',
-          'editOpportunity',
-          'createQuote',
-          'editQuote',
-          'assignOwner',
-          'shareCustomer',
-        ].map(
-          async (action) => [action, await may(context, action, id)] as const,
-        ),
-      ),
     );
     const shared = Boolean(
       rule?.subjects?.some(
@@ -238,9 +230,6 @@ export default defineApiRoutes(async (app: Application) => {
       c.json({
         data: {
           createCustomer: await may(c.get('authz'), 'createCustomer'),
-          manageProducts:
-            (await may(c.get('authz'), 'create', undefined, 'crm.products')) &&
-            (await may(c.get('authz'), 'edit', undefined, 'crm.products')),
         },
       }),
   );
@@ -309,7 +298,7 @@ export default defineApiRoutes(async (app: Application) => {
                   status: 'INVALID_ARGUMENT',
                   reason: 'CRM_USER_NOT_ELIGIBLE',
                   domain: 'crm',
-                  message: 'Select an active user assigned a CRM sales role.',
+                  message: 'Select an active CRM user with customer access.',
                 });
               const previous = await scopedRepository(
                 tx,
@@ -343,30 +332,39 @@ export default defineApiRoutes(async (app: Application) => {
                   status: 'INVALID_ARGUMENT',
                   reason: 'CRM_USER_NOT_ELIGIBLE',
                   domain: 'crm',
-                  message: 'Select active users assigned a CRM sales role.',
+                  message: 'Select active CRM users with customer access.',
                 });
               const bound = rules.withTransaction(tx);
-              const existing = await bound.get(key(id));
-              if (!userIds.length) {
-                if (existing) await bound.delete(key(id));
-              } else {
-                // Deliberately constrained business provisioning: managers have no generic
-                // sharing-settings grant. Accept identities only, never a rule/action/scope.
-                // Native sharing remains the persistence and evaluation engine.
-                let builder = defineSharingRule(key(id), crmRecords.reference())
-                  .title('Customer read-only sharing')
-                  .subjects(
-                    ...userIds.map((userId) => ({ type: 'user', id: userId })),
-                  );
-                for (const scope of scopeKeys)
-                  builder = builder.scope(
-                    'view',
-                    scope,
-                    selection.recordAccess('crm.customer', { customerId: id }),
-                  );
-                const rule = builder.build();
+              for (const [resource, slots] of sharedResources) {
+                const ruleKey = key(id, resource.reference().name);
+                const existing = await bound.get(ruleKey);
+                if (!userIds.length) {
+                  if (existing) await bound.delete(ruleKey);
+                  continue;
+                }
+                const rule = {
+                  key: ruleKey,
+                  title: 'Customer read-only sharing',
+                  resource: {
+                    type: 'composite',
+                    id: resource.reference().name,
+                  },
+                  subjects: userIds.map((id) => ({ type: 'user', id })),
+                  actions: (resource === crmCustomers
+                    ? ['view', 'useAssistant']
+                    : ['view']
+                  ).flatMap((action) =>
+                    slots.map((scopeKey) => ({
+                      action,
+                      scopeKey,
+                      selection: selection.recordAccess('crm.customer', {
+                        customerId: id,
+                      }),
+                    })),
+                  ),
+                };
                 validateDataScopeRule(authz, rule);
-                if (existing) await bound.update(key(id), rule);
+                if (existing) await bound.update(ruleKey, rule);
                 else await bound.create(rule);
               }
             }

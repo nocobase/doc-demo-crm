@@ -8,7 +8,12 @@ import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/to
 import { createAppTest } from '@nocobase/app-testing/server';
 import { expect } from 'vitest';
 import { createStandaloneServer } from '../../server/standalone.js';
-import { crmRecords } from '../../server/providers/crm-permissions.js';
+import {
+  crmCustomers,
+  crmFollowUps,
+  crmOpportunities,
+  crmQuotes,
+} from '../../server/providers/crm-permissions.js';
 
 const test = createAppTest({
   createServer: createStandaloneServer,
@@ -148,10 +153,10 @@ test('enforces own, shared, reassigned and unassigned customer boundaries across
         '/authorization/sharingRules',
         write({
           key: 'forged-edit-sharing',
-          resource: { type: 'composite', id: 'crm.records' },
+          resource: { type: 'composite', id: 'crm.customers' },
           actions: [
             {
-              action: 'editCustomer',
+              action: 'edit',
               scopeKey: 'customers',
               selection: { type: 'records', ids: [customer.id] },
             },
@@ -312,7 +317,7 @@ test('separates page grants from actions and rejects replay after action revocat
     key: role,
     grants: [
       {
-        resource: { type: 'page', id: 'customers' },
+        resource: { type: 'page', id: 'crm.customers' },
         actions: [{ action: 'access' }],
       },
     ],
@@ -325,19 +330,13 @@ test('separates page grants from actions and rejects replay after action revocat
   await authz.permissionSets.update(role, {
     key: role,
     grants: [
-      crmRecords.reference().grant({
-        createCustomer: { customers: 'crm.owned' },
-        view: {
-          customers: 'crm.owned',
-          contacts: 'crm.owned',
-          followUps: 'crm.owned',
-          opportunities: 'crm.owned',
-          quotes: 'crm.owned',
-          lines: 'crm.owned',
-        },
+      crmCustomers.reference().grant({
+        create: { customers: 'crm.owned' },
+        view: { customers: 'crm.owned' },
       }),
     ],
   });
+  expect((await session.fetch('/crm/workspace')).status).toBe(200);
   const mutation = key();
   const customer = await data(
     await session.fetch(
@@ -346,14 +345,47 @@ test('separates page grants from actions and rejects replay after action revocat
     ),
   );
   expect(customer.ownerId).toBe(user.id);
+  expect(
+    (await session.fetch('/crm/customers/' + customer.id + '/contacts')).status,
+  ).toBe(403);
+  expect(
+    (
+      await session.fetch(
+        '/crmSales/customers/' + customer.id + '/opportunities',
+      )
+    ).status,
+  ).toBe(403);
+  expect((await session.fetch('/crmImports/batches')).status).toBe(403);
+  const summary = await data(await session.fetch('/crm/workspace'));
+  expect(summary.counts).toEqual({ customers: 1, opportunities: 0, quotes: 0 });
+  expect(summary.followUps).toEqual([]);
   const context = authz.for({ principal: { type: 'user', id: user.id } });
   expect(
     await context.can({
-      resource: { type: 'page', id: 'customers' },
+      resource: { type: 'page', id: 'crm.customers' },
       action: 'access',
     }),
   ).toBe(false);
-  await authz.permissionSets.update(role, { key: role, grants: [] });
+  await authz.permissionSets.update(role, {
+    key: role,
+    grants: [
+      {
+        resource: { type: 'settings', id: 'crm.documents' },
+        actions: [{ action: 'read' }],
+      },
+    ],
+  });
+  expect((await session.fetch('/crmDocuments/settings')).status).toBe(200);
+  expect(
+    (
+      await session.fetch(
+        '/crmDocuments/orphans/' + randomUUID(),
+        write({}, 'DELETE'),
+      )
+    ).status,
+  ).toBe(403);
+  expect((await session.fetch('/crmNotifications/events')).status).toBe(403);
+  expect((await session.fetch('/crmWorkflows/definition')).status).toBe(403);
   expect(
     (
       await session.fetch(
@@ -364,9 +396,8 @@ test('separates page grants from actions and rejects replay after action revocat
   ).toBe(403);
 });
 
-test('omits workspace previews whose parents are outside independently narrowed scopes', async ({
+test('omits workspace counts and previews whose parents are outside independently narrowed scopes', async ({
   testApp,
-  connection,
 }) => {
   const authz = testApp.application.container.resolve(authorizationToken);
   const users = testApp.application.container.resolve(
@@ -401,16 +432,14 @@ test('omits workspace previews whose parents are outside independently narrowed 
   await authz.permissionSets.create({
     key: role,
     grants: [
-      crmRecords.reference().grant({
-        view: {
-          customers: 'crm.owned',
-          contacts: 'allRecords',
-          followUps: 'allRecords',
-          opportunities: 'allRecords',
-          quotes: 'allRecords',
-          lines: 'allRecords',
-        },
-      }),
+      crmCustomers.reference().grant({ view: { customers: 'crm.owned' } }),
+      crmFollowUps.reference().grant({ view: { followUps: 'allRecords' } }),
+      crmOpportunities
+        .reference()
+        .grant({ view: { opportunities: 'allRecords' } }),
+      crmQuotes
+        .reference()
+        .grant({ view: { quotes: 'allRecords', lines: 'allRecords' } }),
     ],
   });
   await authz.permissionSets.assign({
@@ -421,8 +450,8 @@ test('omits workspace previews whose parents are outside independently narrowed 
   const workspace = await data(await session.fetch('/crm/workspace'));
   expect(workspace.counts).toEqual({
     customers: 0,
-    opportunities: await connection.repository('crmOpportunities').count(),
-    quotes: await connection.repository('crmQuotes').count(),
+    opportunities: 0,
+    quotes: 0,
   });
   expect(workspace.followUps).toEqual([]);
   expect(workspace.opportunities).toEqual([]);
